@@ -201,6 +201,7 @@ One device per person ("<Name> – Mental Health") and a family hub. Entities of
 
 - **Home Assistant backups** include Mental Health automatically (stores in `.storage/`). The integration flushes its data before a backup and pauses writes meanwhile.
 - **Own backups** (admin area): complete state (configuration, all person stores with still-encrypted contents, key material, models) as a `.mhbackup` file (JSON + gzip, encrypted with a **backup password** – no export without one). Whoever has the file *and* the password can restore it. Automatic backups daily or weekly into `<config>/mental_health/backups/`, number kept configurable.
+- **Delete** single backup files in the admin area (with a confirmation). Automatic backups are pruned to the configured number; manual ones stay until you delete them.
 - **Restore**: upload or choose a file → preview (date, version, persons, size) → **a safety backup of the current state is created first** → restore everything, only the configuration, or only one person → the integration reloads. Older backup formats are migrated.
 - **Personal export** (only the person): own data as JSON or Markdown; own JSON can be imported again.
 

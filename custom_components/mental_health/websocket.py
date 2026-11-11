@@ -87,7 +87,7 @@ def async_register(hass: HomeAssistant) -> None:
                 ws_test_notification, ws_sleep_model, ws_sleep_reset, ws_source_preview, ws_export, ws_import,
                 ws_llm, ws_pause, ws_admin, ws_admin_unlock, ws_admin_create_person, ws_admin_delete_person,
                 ws_admin_settings, ws_admin_set_pin, ws_admin_reset_pin, ws_backup_create, ws_backup_password,
-                ws_backup_preview, ws_backup_restore, ws_backup_download, ws_admin_llm, ws_admin_dismiss_request):
+                ws_backup_preview, ws_backup_restore, ws_backup_download, ws_backup_delete, ws_admin_llm, ws_admin_dismiss_request):
         websocket_api.async_register_command(hass, cmd)
 
 
@@ -823,3 +823,18 @@ async def ws_backup_download(hass: HomeAssistant, connection: Any, msg: dict) ->
         connection.send_error(msg["id"], err.code, err.code)
         return
     connection.send_result(msg["id"], {"name": msg["name"], "data": base64.b64encode(blob).decode("ascii")})
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/backup_delete", vol.Required("name"): str, AS: str})
+@websocket_api.async_response
+async def ws_backup_delete(hass: HomeAssistant, connection: Any, msg: dict) -> None:
+    rt = _admin(hass, connection, msg)
+    if rt is None:
+        return
+    try:
+        await hass.async_add_executor_job(archive.delete_file, rt, msg["name"])
+    except archive.BackupError as err:
+        connection.send_error(msg["id"], err.code, err.code)
+        return
+    connection.send_result(msg["id"], {"ok": True, "backups": await hass.async_add_executor_job(archive.list_backups, rt)})

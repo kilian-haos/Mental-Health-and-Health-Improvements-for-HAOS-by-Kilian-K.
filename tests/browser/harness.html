@@ -177,6 +177,7 @@ const handlers = {
   admin_set_pin: () => ({ ok: true }), admin_reset_pin: () => ({ ok: true, lost: 3 }), admin_dismiss_request: () => ({ ok: true }), admin_unlock: () => ({ ok: true, token: "a" }),
   backup_password: () => ({ ok: true }), backup_create: () => ({ name: "x.mhbackup" }), backup_preview: () => ({ created: new Date().toISOString(), version: "1.0.0", format: 1, persons: [{ id: "p1", name: "Kilian", days: 140 }], size: 182000 }),
   backup_restore: () => ({ ok: true }),
+  backup_delete: () => ({ ok: true, backups: [] }),
 };
 const states = { "sensor.esp_32_01_master_bed_sensor": { state: "3.13" }, "notify.family": { state: "unknown" }, "script.push_an_ein_gerat": { state: "off" }, "sun.sun": { state: "above_horizon" } };
 window.hass = {

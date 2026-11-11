@@ -210,6 +210,7 @@ Ein Gerät pro Person („<Name> – Mental Health“) und ein Familien-Hub. Ent
 
 - **Home-Assistant-Backups** enthalten Mental Health automatisch (Stores in `.storage/`). Vor einem Backup schreibt die Integration alles weg und pausiert Schreibzugriffe währenddessen.
 - **Eigene Backups** (Admin-Bereich): vollständiger Stand (Konfiguration, alle Personen-Stores mit weiterhin verschlüsselten Inhalten, Schlüsselmaterial, Modelle) als `.mhbackup` (JSON + gzip, mit einem **Backup-Passwort** verschlüsselt – ohne Passwort kein Export). Wer Datei *und* Passwort hat, kann wiederherstellen. Automatische Backups täglich oder wöchentlich nach `<config>/mental_health/backups/`, Anzahl einstellbar.
+- **Löschen** einzelner Backup-Dateien im Admin-Bereich (mit Bestätigung). Automatische Backups werden auf die eingestellte Anzahl begrenzt; manuelle bleiben, bis du sie löschst.
 - **Wiederherstellen**: Datei hochladen oder auswählen → Vorschau (Datum, Version, Personen, Umfang) → **vorher automatisch ein Sicherungspunkt des aktuellen Stands** → alles, nur Konfiguration oder nur eine Person → die Integration lädt neu. Ältere Backup-Formate werden migriert.
 - **Persönlicher Export** (nur die Person selbst): eigene Daten als JSON oder Markdown; eigenes JSON lässt sich wieder importieren.
 

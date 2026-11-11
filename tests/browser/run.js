@@ -148,6 +148,38 @@ const click = (page, sel, i = 0) => page.evaluate(`(() => { const l = (${deep})(
     check(`${lang} profile: Wochentagszeiten`, (await count(page, "[data-time]")) === 14);
     await page.waitForTimeout(600);
     check(`${lang} profile: Modell-Canvas`, (await count(page, "canvas.model")) === 1);
+    // Datumsmaske (2FA-Stil): Tippen springt weiter, gültiges Datum wird gespeichert
+    check(`${lang} profile: Datumsmaske 8 Felder`, (await count(page, '[data-dm="birthdate"] input')) === 8);
+    await page.evaluate(`(() => { const c = (${deep})('[data-dm="birthdate"] input'); c.forEach((x) => { x.value = ""; }); c[0].focus(); })()`);
+    await page.keyboard.type("05111991");
+    await page.waitForTimeout(300);
+    let upd = await page.evaluate(() => window.__calls.filter((c) => c.type === "mental_health/profile_update").map((c) => c.changes.birthdate));
+    check(`${lang} profile: Datum TT.MM.JJJJ gespeichert`, upd.includes("1991-11-05"), JSON.stringify(upd));
+    // ungültiges Datum: rot markiert, nicht gespeichert
+    await page.evaluate(`(() => { const c = (${deep})('[data-dm="birthdate"] input'); c.forEach((x) => { x.value = ""; }); c[0].focus(); })()`);
+    await page.keyboard.type("31022000");
+    await page.waitForTimeout(250);
+    check(`${lang} profile: ungültiges Datum markiert`, (await count(page, '[data-dm="birthdate"].err')) === 1);
+    upd = await page.evaluate(() => window.__calls.filter((c) => c.type === "mental_health/profile_update").map((c) => c.changes.birthdate));
+    check(`${lang} profile: ungültiges Datum nicht gespeichert`, !upd.includes("2000-02-31"));
+    // ohne Jahr + Rücktaste
+    await page.keyboard.press("Backspace"); await page.keyboard.press("Backspace"); await page.keyboard.press("Backspace"); await page.keyboard.press("Backspace");
+    await page.waitForTimeout(250);
+    upd = await page.evaluate(() => window.__calls.filter((c) => c.type === "mental_health/profile_update").map((c) => c.changes.birthdate));
+    check(`${lang} profile: Geburtstag ohne Jahr`, upd.includes("--02-31") === false && (await count(page, '[data-dm="birthdate"].err')) === 1);
+    await page.evaluate(`(() => { const c = (${deep})('[data-dm="birthdate"] input'); c.forEach((x) => { x.value = ""; }); c[0].focus(); })()`);
+    await page.keyboard.type("2412");
+    await page.waitForTimeout(250);
+    upd = await page.evaluate(() => window.__calls.filter((c) => c.type === "mental_health/profile_update").map((c) => c.changes.birthdate));
+    check(`${lang} profile: ohne Jahr gespeichert`, upd.includes("--12-24"), JSON.stringify(upd));
+    // Einfügen eines ganzen Datums
+    await page.evaluate(`(() => { const c = (${deep})('[data-dm="birthdate"] input')[0]; const dt = new DataTransfer(); dt.setData("text", "17.05.1990"); c.dispatchEvent(new ClipboardEvent("paste", { clipboardData: dt, bubbles: true, cancelable: true })); })()`);
+    await page.waitForTimeout(250);
+    upd = await page.evaluate(() => window.__calls.filter((c) => c.type === "mental_health/profile_update").map((c) => c.changes.birthdate));
+    check(`${lang} profile: Einfügen`, upd.includes("1990-05-17"), JSON.stringify(upd));
+    check(`${lang} profile: Pause-Datum als Maske`, (await count(page, '[data-dm="pause_until"] input')) === 8);
+    await page.evaluate(`(() => { const el = (${deep})('[data-dm="birthdate"]')[0]; el.scrollIntoView(); })()`);
+    await page.screenshot({ path: path.join(OUT, `${lang}_datemask.png`), fullPage: false });
     await click(page, "[data-sedit]");
     await page.waitForTimeout(800);
     check(`${lang} profile: Quellen-Vorschau`, (await count(page, ".graph polyline")) === 1);
@@ -177,7 +209,18 @@ const click = (page, sel, i = 0) => page.evaluate(`(() => { const l = (${deep})(
     check(`${lang} admin: Personenliste`, (await count(page, ".person-row")) === 3);
     check(`${lang} admin: Anfrage`, (await text(page, "h3")).includes(T("Einrichtungs-Anfragen", "Setup requests")));
     check(`${lang} admin: Backup`, (await count(page, "[data-brs]")) === 1);
+    // Backup löschen mit Bestätigung
+    await click(page, "[data-bdel]");
+    await page.waitForTimeout(300);
+    check(`${lang} admin: Lösch-Bestätigung`, (await count(page, ".scrim .dialog")) === 1);
+    await click(page, ".scrim .yes");
+    await page.waitForTimeout(500);
+    const del = await page.evaluate(() => window.__calls.filter((c) => c.type === "mental_health/backup_delete").map((c) => c.name));
+    check(`${lang} admin: Backup gelöscht`, del.length === 1 && del[0].endsWith(".mhbackup"), JSON.stringify(del));
+    await page.waitForTimeout(400);
     await click(page, "[data-create]");
+    await page.waitForTimeout(300);
+    check(`${lang} admin: Datumsmaske im Assistenten`, (await count(page, '[data-dm="wbirth"] input')) === 8);
     await page.waitForTimeout(300);
     check(`${lang} admin: Anlege-Assistent`, (await count(page, ".steps i")) >= 3);
     await page.screenshot({ path: path.join(OUT, `${lang}_admin.png`), fullPage: true });

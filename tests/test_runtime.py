@@ -439,6 +439,19 @@ class BackupMigration(Base):
         k2 = rt2.person_for_user("u_admin")
         self.assertEqual(k2.vault.texts(rt2.clock().today.isoformat())["e"]["journal"], "im Backup")
 
+    def test_delete_backup(self):
+        archive.set_password(self.rt, "sehr-geheim")
+        res = self.aw(archive.async_create(self.rt))
+        names = [b["name"] for b in archive.list_backups(self.rt)]
+        self.assertIn(res["name"], names)
+        for bad in ("../mental_health.keys", "/etc/passwd", ".x.mhbackup", "x.txt", ""):
+            with self.assertRaises(archive.BackupError):
+                archive.delete_file(self.rt, bad)
+        with self.assertRaises(archive.BackupError):
+            archive.delete_file(self.rt, "gibt_es_nicht.mhbackup")
+        archive.delete_file(self.rt, res["name"])
+        self.assertNotIn(res["name"], [b["name"] for b in archive.list_backups(self.rt)])
+
     def test_store_migration_hook(self):
         from custom_components.mental_health.storage import migrate_config
         old = {"persons": {}}

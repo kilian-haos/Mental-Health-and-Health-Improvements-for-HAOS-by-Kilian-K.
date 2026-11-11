@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.1 – 2026-11-11
+
+- **Delete backups** in the admin area: a delete button per backup file with a confirmation (admins only, admin PIN if set). Automatic backups are still pruned to the configured number; manual backups, uploads and safety points are only removed by you.
+- **Date fields as a code-style mask**: date of birth (profile and setup wizard) and "pause until" are entered as DD.MM.YYYY in eight single-digit boxes – jumps to the next box automatically, backspace goes back, arrow keys and pasting a whole date (e.g. `17.05.1990` or `1990-05-17`) work, invalid dates are marked. The year of the birthday stays optional. English uses DD/MM/YYYY.
+
 ## 1.0.0 – 2026-11-11
 
 First release.

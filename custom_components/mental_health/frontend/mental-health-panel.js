@@ -53,7 +53,7 @@ Object.assign(M.I18N.en, {
   ch_journal: "journal", ch_goals: "goals", ch_weekend: "weekend", ch_weekdays: "weekdays", ch_morning: "morning", ch_evening: "evening",
   family_hist: "Family mood", members: "{n} people",
   // Profil
-  p_basics: "About you", p_name: "Display name", p_birthdate: "Date of birth", p_birth_noyear: "without year: --MM-DD", p_sex: "Sex",
+  p_basics: "About you", p_name: "Display name", p_birthdate: "Date of birth", p_birth_noyear: "The year is optional – leave it empty for a birthday without a year.", p_sex: "Sex",
   sex_female: "female", sex_male: "male", sex_other: "other", sex_unspecified: "not specified", p_height: "Height (cm)",
   p_weight: "Weight (kg)", p_weight_live: "Live weight tracking", p_weight_live_hint: "Values stay visible only to you. Without a sensor you'll be asked in the evening.",
   p_weight_entity: "Weight sensor (optional)", p_weight_entity_hint: "Admins can see the values of this sensor in Home Assistant.",
@@ -117,7 +117,7 @@ Object.assign(M.I18N.en, {
   b_keep: "Keep", b_list: "Backups", b_download: "Download", b_restore: "Restore", b_upload: "Upload file", b_preview: "Preview",
   b_scope: "What", b_all: "Everything", b_config: "Configuration only", b_person: "One person", b_restore_go: "Restore now",
   b_restore_hint: "A safety backup of the current state is created first. Afterwards the integration reloads.", b_restored: "Restored – reloading …",
-  b_created: "Backup created ✓", b_enter_pw: "Password of the backup", b_none: "No backups yet.",
+  b_created: "Backup created ✓", b_delete: "Delete", b_deleted: "Backup deleted", b_delete_confirm: "Delete the backup {name} for good? This cannot be undone – download it first if you might need it.", b_enter_pw: "Password of the backup", b_none: "No backups yet.",
   ha_backup_hint: "Home Assistant backups include Mental Health automatically.",
   model_state: "Model", participation_14: "Participation (14 days)", nights_learned: "{n} nights · {l} confirmations",
   dismiss: "Dismiss", setup_for: "Set up", no_persons: "No persons yet – add the first one.",
@@ -164,7 +164,7 @@ Object.assign(M.I18N.de, {
   ch_polarity: "{v}", ch_trained: "Training", ch_sleep_short: "wenig Schlaf", ch_sleep_long: "viel Schlaf", ch_period: "Periode",
   ch_journal: "Journal", ch_goals: "Ziele", ch_weekend: "Wochenende", ch_weekdays: "werktags", ch_morning: "morgens", ch_evening: "abends",
   family_hist: "Familienstimmung", members: "{n} Personen",
-  p_basics: "Über dich", p_name: "Anzeigename", p_birthdate: "Geburtsdatum", p_birth_noyear: "ohne Jahr: --MM-TT", p_sex: "Geschlecht",
+  p_basics: "Über dich", p_name: "Anzeigename", p_birthdate: "Geburtsdatum", p_birth_noyear: "Das Jahr ist optional – leer lassen für einen Geburtstag ohne Jahr.", p_sex: "Geschlecht",
   sex_female: "weiblich", sex_male: "männlich", sex_other: "anderes", sex_unspecified: "keine Angabe", p_height: "Größe (cm)",
   p_weight: "Gewicht (kg)", p_weight_live: "Live-Gewichtstracking", p_weight_live_hint: "Werte bleiben nur für dich sichtbar. Ohne Sensor wirst du abends gefragt.",
   p_weight_entity: "Gewichts-Sensor (optional)", p_weight_entity_hint: "Admins können die Werte dieses Sensors in Home Assistant sehen.",
@@ -227,7 +227,7 @@ Object.assign(M.I18N.de, {
   b_keep: "Behalten", b_list: "Backups", b_download: "Herunterladen", b_restore: "Wiederherstellen", b_upload: "Datei hochladen", b_preview: "Vorschau",
   b_scope: "Was", b_all: "Alles", b_config: "Nur Konfiguration", b_person: "Eine Person", b_restore_go: "Jetzt wiederherstellen",
   b_restore_hint: "Vorher wird automatisch ein Sicherungspunkt des aktuellen Stands erstellt. Danach lädt die Integration neu.", b_restored: "Wiederhergestellt – lädt neu …",
-  b_created: "Backup erstellt ✓", b_enter_pw: "Passwort des Backups", b_none: "Noch keine Backups.",
+  b_created: "Backup erstellt ✓", b_delete: "Löschen", b_deleted: "Backup gelöscht", b_delete_confirm: "Backup {name} endgültig löschen? Das lässt sich nicht rückgängig machen – lade es vorher herunter, falls du es noch brauchen könntest.", b_enter_pw: "Passwort des Backups", b_none: "Noch keine Backups.",
   ha_backup_hint: "Home-Assistant-Backups enthalten Mental Health automatisch.",
   model_state: "Modell", participation_14: "Teilnahme (14 Tage)", nights_learned: "{n} Nächte · {l} Bestätigungen",
   dismiss: "Verwerfen", setup_for: "Einrichten", no_persons: "Noch keine Personen – leg die erste an.",
@@ -309,6 +309,19 @@ canvas.model{ width:100%; height:240px; display:block; border-radius:var(--rad-i
 .wd-times{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
 .wd-times input{ padding:8px 4px; text-align:center; font-size:13px; }
 .wd-times span{ font-size:11px; color:var(--c-muted); text-align:center; }
+.dmask{ display:inline-flex; align-items:center; gap:5px; flex-wrap:nowrap; }
+.dmask input{ width:clamp(26px,7.4vw,36px); height:46px; padding:0; text-align:center; font-size:19px; font-weight:600; border-radius:11px; caret-color:var(--c-teal);
+  font-variant-numeric:tabular-nums; transition:border-color .2s var(--ease), background .2s, transform .16s var(--spring); }
+.dmask input.filled{ background:var(--c-active); color:var(--c-teal); animation:mh-pop .22s var(--spring); }
+.dmask input:focus{ transform:translateY(-1px); }
+.dmask input::placeholder{ color:var(--c-muted); opacity:.45; font-weight:500; font-size:13px; }
+.dmask .sep{ color:var(--c-muted); font-size:20px; width:8px; text-align:center; }
+.dmask .grp{ display:inline-flex; gap:5px; }
+.dmask.err input{ border-color:var(--c-red); }
+.dmask.ok input.filled{ border-color:transparent; }
+.dmask[aria-disabled="true"]{ opacity:.55; pointer-events:none; }
+.dm-row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.dm-clear{ padding:6px 10px; font-size:13px; }
 .lock{ display:grid; place-items:center; min-height:60vh; text-align:center; gap:14px; }
 .dialog > div:first-child{ white-space:pre-line; }
 .note{ font-size:11.5px; color:var(--c-muted); text-align:center; margin-top:18px; }
@@ -325,6 +338,102 @@ canvas.model{ width:100%; height:240px; display:block; border-radius:var(--rad-i
   .bottom .ic{ font-size:17px; }
 }
 `;
+
+
+/* Datumsmaske im 2FA-Stil: TT.MM.JJJJ als 8 Ziffernfelder (Jahr optional für Geburtstage) */
+function dmParts(v) {
+  const s = String(v || "");
+  let m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (m) return m[3] + m[2] + m[1];
+  m = /^--(\d{2})-(\d{2})$/.exec(s);
+  if (m) return m[2] + m[1];
+  return "";
+}
+function dateMaskHtml(key, value, lang, opts = {}) {
+  const d = dmParts(value).padEnd(8, " ");
+  const sep = lang === "de" ? "." : "/";
+  const ph = lang === "de" ? ["T", "T", "M", "M", "J", "J", "J", "J"] : ["D", "D", "M", "M", "Y", "Y", "Y", "Y"];
+  const lab = lang === "de" ? ["Tag", "Monat", "Jahr"] : ["Day", "Month", "Year"];
+  const cell = (i, g) => `<input inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="off" data-i="${i}" placeholder="${ph[i]}"
+    aria-label="${lab[g]} ${i < 2 ? i + 1 : i < 4 ? i - 1 : i - 3}" value="${d[i] === " " ? "" : d[i]}" class="${d[i] === " " ? "" : "filled"}" ${opts.disabled ? "disabled" : ""}>`;
+  return `<div class="dm-row"><div class="dmask" data-dm="${key}" data-noyear="${opts.noYear ? 1 : 0}" aria-disabled="${opts.disabled ? "true" : "false"}">
+    <span class="grp">${cell(0, 0)}${cell(1, 0)}</span><span class="sep">${sep}</span><span class="grp">${cell(2, 1)}${cell(3, 1)}</span><span class="sep">${sep}</span>
+    <span class="grp">${cell(4, 2)}${cell(5, 2)}${cell(6, 2)}${cell(7, 2)}</span></div>
+    ${opts.clear && !opts.disabled ? `<button class="ghost dm-clear" data-dmclear="${key}" title="${lang === "de" ? "Leeren" : "Clear"}">✕</button>` : ""}</div>`;
+}
+/* Ergebnis: ISO "YYYY-MM-DD", "--MM-DD" (ohne Jahr), null (leer), undefined (unvollständig/ungültig) */
+function dmValue(box) {
+  const v = [...box.querySelectorAll("input")].map((x) => x.value);
+  const all = v.join("");
+  if (!all) return null;
+  const dd = v[0] + v[1], mm = v[2] + v[3], yy = v.slice(4).join("");
+  if (dd.length < 2 || mm.length < 2) return undefined;
+  const d = +dd, m = +mm;
+  if (m < 1 || m > 12 || d < 1) return undefined;
+  if (!yy) {
+    if (box.dataset.noyear !== "1") return undefined;
+    return d <= [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1] ? `--${mm}-${dd}` : undefined;
+  }
+  if (yy.length < 4) return undefined;
+  const dt = new Date(+yy, m - 1, d);
+  if (dt.getFullYear() !== +yy || dt.getMonth() !== m - 1 || dt.getDate() !== d || +yy < 1900 || +yy > 2100) return undefined;
+  return `${yy}-${mm}-${dd}`;
+}
+function bindDateMask(box, onChange) {
+  const cells = [...box.querySelectorAll("input")];
+  let last = dmValue(box);
+  const emit = () => {
+    cells.forEach((c) => c.classList.toggle("filled", !!c.value));
+    const val = dmValue(box);
+    const complete = cells.every((c) => c.value) || (box.dataset.noyear === "1" && cells.slice(0, 4).every((c) => c.value) && cells.slice(4).every((c) => !c.value));
+    box.classList.toggle("err", val === undefined && complete);
+    box.classList.toggle("ok", val !== undefined && val !== null);
+    if (val !== undefined && val !== last) { last = val; onChange(val); }
+    if (val === undefined && complete) shake(box);
+  };
+  const fill = (start, digits) => {
+    let i = start;
+    for (const ch of digits) { if (i > 7) break; cells[i].value = ch; i++; }
+    cells[Math.min(i, 7)].focus();
+    emit();
+  };
+  cells.forEach((c, i) => {
+    c.addEventListener("focus", () => c.select());
+    c.addEventListener("input", () => {
+      const digits = c.value.replace(/\D/g, "");
+      c.value = "";
+      if (digits) fill(i, digits); else emit();
+    });
+    c.addEventListener("keydown", (ev) => {
+      if (ev.key === "Backspace") {
+        ev.preventDefault();
+        if (c.value) c.value = ""; else if (i > 0) { cells[i - 1].value = ""; cells[i - 1].focus(); }
+        emit();
+      } else if (ev.key === "Delete") { ev.preventDefault(); c.value = ""; emit(); }
+      else if (ev.key === "ArrowLeft" && i > 0) { ev.preventDefault(); cells[i - 1].focus(); }
+      else if (ev.key === "ArrowRight" && i < 7) { ev.preventDefault(); cells[i + 1].focus(); }
+      else if (ev.key === "." || ev.key === "/" || ev.key === "-") {
+        ev.preventDefault();
+        const next = i < 2 ? 2 : i < 4 ? 4 : i;
+        if (i === 1 && !cells[0].value) { /* nichts */ } else if (next !== i) cells[next].focus();
+      }
+    });
+    c.addEventListener("paste", (ev) => {
+      const t = (ev.clipboardData || window.clipboardData).getData("text").trim();
+      ev.preventDefault();
+      let m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(t);
+      let digits;
+      if (m) digits = m[3].padStart(2, "0") + m[2].padStart(2, "0") + m[1];
+      else if ((m = /^(\d{1,2})[./-](\d{1,2})(?:[./-](\d{4}))?$/.exec(t))) digits = m[1].padStart(2, "0") + m[2].padStart(2, "0") + (m[3] || "");
+      else digits = t.replace(/\D/g, "");
+      cells.forEach((x) => { x.value = ""; });
+      fill(0, digits.slice(0, 8));
+    });
+  });
+  const row = box.parentElement;
+  const clr = row && row.querySelector("[data-dmclear]");
+  if (clr) clr.addEventListener("click", () => { cells.forEach((x) => { x.value = ""; }); emit(); cells[0].focus(); });
+}
 
 const TAB_ICONS = { today: "☀️", insights: "✨", history: "🗓️", family: "🏡", profile: "👤", admin: "🛠️" };
 const KINDS = ["binary", "numeric", "enum", "probability", "aux"];
@@ -888,7 +997,7 @@ class MHPanel extends HTMLElement {
     sec(`<h3>👤 ${esc(L("p_basics"))}</h3>${lockedNote("profile_edit")}
       <div class="${can("profile_edit") ? "" : "locked-field"}">
       <div class="field"><label class="lbl">${esc(L("p_name"))}</label><input data-p="name" value="${esc(p.name)}" ${dis("profile_edit")}></div>
-      <div class="grid2"><div class="field"><label class="lbl">${esc(L("p_birthdate"))}</label><input data-p="birthdate" placeholder="YYYY-MM-DD" value="${esc(p.birthdate || "")}" ${dis("profile_edit")}><div class="hint">${esc(L("p_birth_noyear"))}</div></div>
+      <div class="grid2"><div class="field" style="grid-column:1 / -1"><label class="lbl">${esc(L("p_birthdate"))}</label>${dateMaskHtml("birthdate", p.birthdate, lang, { noYear: true, clear: true, disabled: !can("profile_edit") })}<div class="hint" style="margin-top:6px">${esc(L("p_birth_noyear"))}</div></div>
       <div class="field"><label class="lbl">${esc(L("p_sex"))}</label><select data-p="sex" ${dis("profile_edit")}>${["female", "male", "other", "unspecified"].map((s) => `<option value="${s}" ${p.sex === s ? "selected" : ""}>${esc(L("sex_" + s))}</option>`).join("")}</select></div>
       <div class="field"><label class="lbl">${esc(L("p_height"))}</label><input type="number" data-p="height_cm" value="${p.height_cm ?? ""}" ${dis("profile_edit")}></div>
       <div class="field"><label class="lbl">${esc(L("p_weight"))}</label>${pv.weight_hidden ? `<div class="hint">🔒 ${esc(L("p_weight_hidden", { name: p.name }))}</div>` : `<input type="number" step="0.1" data-p="weight_kg" value="${p.weight_kg ?? ""}" ${can("weight_edit") ? "" : "disabled"}>`}</div></div>
@@ -918,7 +1027,7 @@ class MHPanel extends HTMLElement {
     sec(`<h3>⏰ ${esc(L("p_times"))}</h3>${lockedNote("schedule_edit")}${slotHtml("morning")}${slotHtml("evening")}
       ${(p.sleep_sources || []).length ? `<div class="field" style="margin-top:12px"><label class="lbl">${esc(L("t_gap"))}</label><input type="number" min="5" max="90" data-gap value="${sch.sleep_gap_min}" ${dis("schedule_edit")}><div class="hint">${esc(L("t_gap_hint"))}</div></div>` : ""}
       <h4>⏸️ ${esc(L("p_pause"))}</h4>${p.pause ? `<div class="row"><span class="chip amber">${esc(p.pause.until ? L("paused_until", { d: fmtDate(p.pause.until, lang) }) : L("paused"))}</span><span class="spacer"></span><button class="pauseoff" ${dis("pause")}>${esc(L("pause_off"))}</button></div>`
-        : `<div class="row"><input type="date" class="puntil" style="max-width:200px" ${dis("pause")}><span class="spacer"></span><button class="pauseon" ${dis("pause")}>${esc(L("pause_on"))}</button></div><div class="hint">${esc(L("pause_until"))}</div>`}`);
+        : `<div class="row">${dateMaskHtml("pause_until", null, lang, { clear: true, disabled: !can("pause") })}<span class="spacer"></span><button class="pauseon" ${dis("pause")}>${esc(L("pause_on"))}</button></div><div class="hint">${esc(L("pause_until"))}</div>`}`);
     // Benachrichtigungen
     const nt = p.notify;
     sec(`<h3>🔔 ${esc(L("p_notify"))}</h3>${lockedNote("schedule_edit")}
@@ -974,6 +1083,10 @@ class MHPanel extends HTMLElement {
       if (v === "") v = null;
       save({ [inp.dataset.p]: v }, inp.dataset.p === "sex");
     }));
+    const bd = root.querySelector('[data-dm="birthdate"]');
+    if (bd) bindDateMask(bd, (v) => save({ birthdate: v }));
+    const pu = root.querySelector('[data-dm="pause_until"]');
+    if (pu) bindDateMask(pu, () => {});
     root.querySelectorAll("[data-pt]").forEach((b) => b.addEventListener("click", () => { const k = b.dataset.pt; save({ [k]: !p[k] }, true); }));
     root.querySelectorAll("[data-mod]").forEach((b) => b.addEventListener("click", () => { const m = b.dataset.mod; b.classList.toggle("on"); save({ modules: { [m]: !p.modules[m] } }, true); }));
     root.querySelectorAll("[data-mode]").forEach((g) => g.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
@@ -988,7 +1101,8 @@ class MHPanel extends HTMLElement {
     const gap = root.querySelector("[data-gap]");
     if (gap) gap.addEventListener("change", () => save({ schedule: { sleep_gap_min: parseInt(gap.value, 10) } }));
     const pon = root.querySelector(".pauseon"), poff = root.querySelector(".pauseoff");
-    if (pon) pon.addEventListener("click", async () => { const u = root.querySelector(".puntil").value || null; await this.call("pause", Object.assign({ on: true, until: u }, admin ? { pid: p.id } : {}), admin); this.rerenderProfile(pv, admin, true); });
+    if (pon) pon.addEventListener("click", async () => { const box = root.querySelector('[data-dm="pause_until"]'); const u = box ? dmValue(box) : null;
+      if (u === undefined) { shake(box); return; } await this.call("pause", Object.assign({ on: true, until: u }, admin ? { pid: p.id } : {}), admin); this.rerenderProfile(pv, admin, true); });
     if (poff) poff.addEventListener("click", async () => { await this.call("pause", Object.assign({ on: false }, admin ? { pid: p.id } : {}), admin); this.rerenderProfile(pv, admin, true); });
     root.querySelectorAll("[data-nt]").forEach((b) => b.addEventListener("click", () => save({ notify: { [b.dataset.nt]: !p.notify[b.dataset.nt] } }, true)));
     root.querySelectorAll("[data-ns]").forEach((s) => s.addEventListener("change", () => save({ notify: { [s.dataset.ns]: s.value } })));
@@ -1327,7 +1441,8 @@ class MHPanel extends HTMLElement {
       <div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap"><button class="primary bnow" ${b.password ? "" : "disabled"}>${esc(L("b_create"))}</button>
         <label class="chip" style="cursor:pointer;padding:10px 16px">${esc(L("b_upload"))}<input type="file" accept=".mhbackup" class="bup" hidden></label></div>
       <h4>${esc(L("b_list"))}</h4>${a.backups.length ? a.backups.map((x) => `<div class="kv"><div>${esc(x.name)}<div class="why">${(x.size / 1024).toFixed(0)} kB · ${esc(fmtDate(new Date(x.mtime * 1000).toISOString(), lang, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }))}</div></div>
-        <div class="row"><button class="ghost" data-bdl="${esc(x.name)}">⬇</button><button class="ghost" data-brs="${esc(x.name)}">${esc(L("b_restore"))}</button></div></div>`).join("") : `<div class="hint">${esc(L("b_none"))}</div>`}
+        <div class="row"><button class="ghost" data-bdl="${esc(x.name)}" title="${esc(L("b_download"))}">⬇</button><button class="ghost" data-brs="${esc(x.name)}">${esc(L("b_restore"))}</button>
+        <button class="ghost danger" data-bdel="${esc(x.name)}" title="${esc(L("b_delete"))}">🗑</button></div></div>`).join("") : `<div class="hint">${esc(L("b_none"))}</div>`}
       <div class="restore"></div>`, "wide");
     out.push(`<datalist id="mh-all">${Object.keys(this._hass.states).slice(0, 4000).map((e) => `<option value="${esc(e)}">`).join("")}</datalist>`);
     this._bind = (root) => this.bindAdmin(root, a);
@@ -1396,6 +1511,17 @@ class MHPanel extends HTMLElement {
       const el = document.createElement("a"); el.href = URL.createObjectURL(blob); el.download = b.dataset.bdl; el.click(); setTimeout(() => URL.revokeObjectURL(el.href), 3000);
     }));
     root.querySelectorAll("[data-brs]").forEach((b) => b.addEventListener("click", () => this.restoreFlow(root.querySelector(".restore"), b.dataset.brs, a)));
+    root.querySelectorAll("[data-bdel]").forEach((b) => b.addEventListener("click", async () => {
+      const name = b.dataset.bdel;
+      if (!(await this.confirm(L("b_delete_confirm", { name }), L("delete")))) return;
+      const row = b.closest(".kv");
+      try {
+        await this.call("backup_delete", { name }, true);
+        if (row && !reduced()) { row.style.transition = "opacity .25s, transform .25s"; row.style.opacity = "0"; row.style.transform = "translateX(12px)"; }
+        toast(this.shadowRoot, L("b_deleted"));
+        setTimeout(() => this.render(true), reduced() ? 0 : 260);
+      } catch (e) { toast(this.shadowRoot, L("error")); }
+    }));
     root.querySelector(".bup").addEventListener("change", async (ev) => {
       const f = ev.target.files[0]; if (!f) return;
       const q = this.api.adminSession ? `?admin_session=${encodeURIComponent(this.api.adminSession)}` : "";
@@ -1437,7 +1563,7 @@ class MHPanel extends HTMLElement {
       const ag = age();
       box.innerHTML = `<div class="tile rise" style="margin-top:14px"><div class="steps">${[0, 1, 2].map((k) => `<i class="${k <= step ? "on" : ""}"></i>`).join("")}</div>
         ${step === 0 ? `<div class="field"><label class="lbl">${esc(L("p_name"))}</label><input class="wn" value="${esc(data.name)}"></div>
-          <div class="grid2"><div class="field"><label class="lbl">${esc(L("p_birthdate"))}</label><input class="wb" placeholder="YYYY-MM-DD" value="${esc(data.birthdate)}"></div>
+          <div class="grid2"><div class="field" style="grid-column:1 / -1"><label class="lbl">${esc(L("p_birthdate"))}</label>${dateMaskHtml("wbirth", data.birthdate, this.lang, { noYear: true, clear: true })}<div class="hint" style="margin-top:6px">${esc(L("p_birth_noyear"))}</div></div>
           <div class="field"><label class="lbl">${esc(L("p_sex"))}</label><select class="ws">${["female", "male", "other", "unspecified"].map((s) => `<option value="${s}" ${data.sex === s ? "selected" : ""}>${esc(L("sex_" + s))}</option>`).join("")}</select></div></div>`
         : step === 1 ? `<div class="kv"><div>${esc(L("a_child"))}<div class="why">${esc(L("a_child_hint"))}</div>${ag != null && ag <= 12 && !data.child ? `<div class="why" style="color:var(--c-amber)">${esc(L("a_child_suggest", { n: ag }))}</div>` : ""}</div><button class="toggle ${data.child ? "on" : ""}" data-w="child"></button></div>
           ${!data.child ? `<div class="kv"><div>${esc(L("a_can_edit"))}</div><button class="toggle ${data.can_edit_own ? "on" : ""}" data-w="can_edit_own"></button></div>` : ""}`
@@ -1451,14 +1577,19 @@ class MHPanel extends HTMLElement {
           <button class="primary wnext">${esc(step < 2 ? L("next") : L("a_create"))}</button></div></div>`;
       const q = (x) => box.querySelector(x);
       if (q(".wn")) q(".wn").addEventListener("input", () => { data.name = q(".wn").value; });
-      if (q(".wb")) q(".wb").addEventListener("input", () => { data.birthdate = q(".wb").value.trim(); });
+      const wb = box.querySelector('[data-dm="wbirth"]');
+      if (wb) bindDateMask(wb, (v) => { data.birthdate = v || ""; draw(); });
       if (q(".ws")) q(".ws").addEventListener("change", () => { data.sex = q(".ws").value; });
       box.querySelectorAll("[data-w]").forEach((b) => b.addEventListener("click", () => { data[b.dataset.w] = !data[b.dataset.w]; draw(); }));
       box.querySelectorAll("[data-wm]").forEach((b) => b.addEventListener("click", () => { data.modules[b.dataset.wm] = !b.classList.contains("on"); draw(); }));
       if (q(".wcancel")) q(".wcancel").addEventListener("click", () => { box.innerHTML = ""; });
       if (q(".wprev")) q(".wprev").addEventListener("click", () => { step--; draw(); });
       q(".wnext").addEventListener("click", async () => {
-        if (step < 2) { if (step === 0 && data.birthdate && age() == null && !/^--\d{2}-\d{2}$/.test(data.birthdate)) { shake(q(".wb")); return; } step++; draw(); return; }
+        if (step < 2) {
+          const wbx = box.querySelector('[data-dm="wbirth"]');
+          if (step === 0 && wbx && dmValue(wbx) === undefined) { shake(wbx); return; }
+          step++; draw(); return;
+        }
         const payload = Object.assign({}, data);
         if (!payload.birthdate) delete payload.birthdate;
         try {

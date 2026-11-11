@@ -178,6 +178,16 @@ def read_file(rt: Any, name: str) -> bytes:
         raise BackupError("not_found") from err
 
 
+def delete_file(rt: Any, name: str) -> None:
+    """Delete one backup file (admins). Only plain file names inside the backup folder."""
+    if not _NAME_RE.match(name or "") or "/" in name or "\\" in name or name.startswith("."):
+        raise BackupError("invalid_name")
+    path = os.path.join(_dir(rt), name)
+    if not os.path.isfile(path):
+        raise BackupError("not_found")
+    os.remove(path)
+
+
 def decode_upload(data_b64: str) -> bytes:
     try:
         raw = base64.b64decode(data_b64.split(",", 1)[-1])
