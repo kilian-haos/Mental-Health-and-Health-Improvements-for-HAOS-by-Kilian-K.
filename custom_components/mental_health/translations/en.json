@@ -1,0 +1,399 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Mental Health and Health Improvements",
+        "description": "Your personal mood, journal, sleep and health companion – for every person in the household. After setup, open **Mental Health** in the sidebar: in the admin area you add persons, sources and notifications.",
+        "data": {
+          "panel": "Show in the sidebar",
+          "panel_title": "Sidebar title (empty = default)"
+        },
+        "data_description": {
+          "panel": "Recommended: the personal dashboard lives in the sidebar panel."
+        }
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Mental Health is already set up."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Sidebar",
+        "description": "Persons, modules, sources, schedules, PINs and backups are managed in the admin area of the Mental Health panel.",
+        "data": {
+          "panel": "Show in the sidebar",
+          "panel_title": "Sidebar title (empty = default)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "mood_morning": {
+        "name": "Mood morning"
+      },
+      "mood_evening": {
+        "name": "Mood evening"
+      },
+      "mood_today": {
+        "name": "Mood today"
+      },
+      "mood_avg7": {
+        "name": "Mood 7-day average"
+      },
+      "mood_avg30": {
+        "name": "Mood 30-day average"
+      },
+      "mood_trend": {
+        "name": "Mood trend"
+      },
+      "mood_forecast": {
+        "name": "Mood forecast"
+      },
+      "energy": {
+        "name": "Energy"
+      },
+      "health_feeling": {
+        "name": "Feeling of health"
+      },
+      "sleep_quality": {
+        "name": "Sleep quality (own rating)"
+      },
+      "health_score": {
+        "name": "Health score"
+      },
+      "sleep_state": {
+        "name": "Sleep state",
+        "state": {
+          "away": "Up / away",
+          "in_bed": "In bed, awake",
+          "asleep": "Asleep",
+          "nap": "Nap"
+        }
+      },
+      "sleep_duration": {
+        "name": "Last sleep duration"
+      },
+      "sleep_score": {
+        "name": "Sleep score"
+      },
+      "sleep_week_pct": {
+        "name": "Sleep vs. week"
+      },
+      "sleep_opt_pct": {
+        "name": "Sleep vs. optimum"
+      },
+      "sleep_optimum": {
+        "name": "Optimal sleep duration"
+      },
+      "last_bedtime": {
+        "name": "Last fell asleep"
+      },
+      "last_wake": {
+        "name": "Last woke up"
+      },
+      "predicted_bedtime": {
+        "name": "Predicted bedtime"
+      },
+      "predicted_wake": {
+        "name": "Predicted wake-up"
+      },
+      "sleep_regularity": {
+        "name": "Sleep regularity"
+      },
+      "sleep_confidence": {
+        "name": "Sleep detection confidence"
+      },
+      "weight_profile": {
+        "name": "Weight"
+      },
+      "weight_days_since": {
+        "name": "Days since last weight"
+      },
+      "training_status": {
+        "name": "Training status",
+        "state": {
+          "pause": "Rest",
+          "ready_soon": "Ready soon",
+          "recommended": "Recommended",
+          "overdue": "Overdue"
+        }
+      },
+      "training_days_since": {
+        "name": "Days since training"
+      },
+      "training_soreness": {
+        "name": "Last muscle soreness"
+      },
+      "last_training": {
+        "name": "Last training"
+      },
+      "cycle_next_start": {
+        "name": "Next period start"
+      },
+      "cycle_next_end": {
+        "name": "Next period end"
+      },
+      "next_morning": {
+        "name": "Next morning check-in"
+      },
+      "next_evening": {
+        "name": "Next evening check-in"
+      },
+      "last_checkin": {
+        "name": "Last check-in"
+      },
+      "streak": {
+        "name": "Check-in streak"
+      },
+      "age": {
+        "name": "Age"
+      },
+      "next_birthday": {
+        "name": "Next birthday"
+      },
+      "family_mood": {
+        "name": "Family mood today"
+      },
+      "family_mood_avg7": {
+        "name": "Family mood 7-day average"
+      },
+      "family_trend": {
+        "name": "Family mood trend"
+      },
+      "family_health": {
+        "name": "Family health score"
+      },
+      "family_sleep": {
+        "name": "Family sleep score"
+      },
+      "participation": {
+        "name": "Participation today"
+      },
+      "birthdays_today": {
+        "name": "Birthdays today"
+      },
+      "last_backup": {
+        "name": "Last backup"
+      }
+    },
+    "binary_sensor": {
+      "sleeping": {
+        "name": "Asleep"
+      },
+      "in_bed": {
+        "name": "In bed"
+      },
+      "weight_due": {
+        "name": "Weight due"
+      },
+      "training_recommended": {
+        "name": "Training recommended"
+      },
+      "cycle_active": {
+        "name": "Period active"
+      },
+      "morning_open": {
+        "name": "Morning check-in open"
+      },
+      "evening_open": {
+        "name": "Evening check-in open"
+      },
+      "birthday_today": {
+        "name": "Birthday today"
+      }
+    },
+    "switch": {
+      "pause": {
+        "name": "Pause (holiday, illness)"
+      },
+      "llm_beta": {
+        "name": "LLM features (beta)"
+      }
+    },
+    "button": {
+      "start_morning": {
+        "name": "Start morning check-in"
+      },
+      "start_evening": {
+        "name": "Start evening check-in"
+      },
+      "create_backup": {
+        "name": "Create backup"
+      }
+    },
+    "select": {
+      "load_level": {
+        "name": "Computing load",
+        "state": {
+          "1": "1 – light",
+          "2": "2 – balanced",
+          "3": "3 – thorough"
+        }
+      }
+    }
+  },
+  "issues": {
+    "missing_entity": {
+      "title": "Mental Health: {entity} is missing",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Remove missing source",
+            "description": "{entity} (used for {name}) no longer exists. Remove the reference? Learned data and entries are kept – you can add a new source in the profile at any time."
+          }
+        }
+      }
+    },
+    "missing_target": {
+      "title": "Mental Health: notification target {entity} is missing",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Remove notification target",
+            "description": "Check-in notifications for {name} cannot reach {entity}. Is the Companion App still logged in? Remove the target now and add the new device in the profile."
+          }
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "unknown_person": {
+      "message": "{person} is not set up in Mental Health."
+    },
+    "admin_only": {
+      "message": "Only administrators can do this."
+    },
+    "needs_user": {
+      "message": "This action needs a logged-in user."
+    },
+    "backup_no_password": {
+      "message": "Set a backup password in the admin area first."
+    },
+    "backup_wrong_password": {
+      "message": "The backup password is wrong."
+    },
+    "backup_invalid_file": {
+      "message": "This is not a Mental Health backup file."
+    },
+    "backup_not_found": {
+      "message": "Backup file not found."
+    },
+    "backup_invalid_name": {
+      "message": "Invalid file name."
+    },
+    "backup_password_short": {
+      "message": "The backup password needs at least 8 characters."
+    }
+  },
+  "selector": {
+    "kind": {
+      "options": {
+        "morning": "Morning",
+        "evening": "Evening"
+      }
+    },
+    "scope": {
+      "options": {
+        "all": "Everything",
+        "config": "Configuration only"
+      }
+    }
+  },
+  "services": {
+    "start_checkin": {
+      "name": "Start check-in",
+      "description": "Opens a check-in for a person and notifies their devices.",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "The person (person entity)."
+        },
+        "kind": {
+          "name": "Kind",
+          "description": "Morning or evening."
+        },
+        "window_minutes": {
+          "name": "Answer window",
+          "description": "How long the check-in stays open (default from the settings)."
+        }
+      }
+    },
+    "cancel_checkin": {
+      "name": "Cancel check-in",
+      "description": "Closes open check-ins and removes the notifications.",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "The person."
+        },
+        "kind": {
+          "name": "Kind",
+          "description": "Empty = both."
+        }
+      }
+    },
+    "pause_person": {
+      "name": "Pause person",
+      "description": "Holiday or illness: no check-ins, streaks don't break, forecasts pause.",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "The person."
+        },
+        "until": {
+          "name": "Until",
+          "description": "Last paused day (empty = until resumed)."
+        }
+      }
+    },
+    "resume_person": {
+      "name": "Resume person",
+      "description": "Ends the pause.",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "The person."
+        }
+      }
+    },
+    "create_backup": {
+      "name": "Create backup",
+      "description": "Creates an encrypted backup of the integration (admins)."
+    },
+    "restore_backup": {
+      "name": "Restore backup",
+      "description": "Restores a backup from the backup folder. A safety backup of the current state is created first.",
+      "fields": {
+        "file": {
+          "name": "File",
+          "description": "File name in <config>/mental_health/backups."
+        },
+        "password": {
+          "name": "Password",
+          "description": "Backup password."
+        },
+        "scope": {
+          "name": "Scope",
+          "description": "What to restore."
+        }
+      }
+    },
+    "request_setup": {
+      "name": "Request setup",
+      "description": "Asks the admins to set up Mental Health for the calling user."
+    },
+    "send_test_notification": {
+      "name": "Send test notification",
+      "description": "Sends a test to all notification targets of a person.",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "The person."
+        }
+      }
+    }
+  }
+}

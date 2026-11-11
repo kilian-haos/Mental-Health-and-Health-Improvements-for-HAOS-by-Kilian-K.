@@ -1,0 +1,399 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Mental Health and Health Improvements",
+        "description": "Dein persönlicher Stimmungs-, Journal-, Schlaf- und Gesundheitsbegleiter – für jede Person im Haushalt. Öffne nach der Einrichtung **Mental Health** in der Seitenleiste: Im Admin-Bereich legst du Personen, Quellen und Benachrichtigungen an.",
+        "data": {
+          "panel": "In der Seitenleiste anzeigen",
+          "panel_title": "Titel in der Seitenleiste (leer = Standard)"
+        },
+        "data_description": {
+          "panel": "Empfohlen: Das persönliche Dashboard lebt im Seitenleisten-Panel."
+        }
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Mental Health ist bereits eingerichtet."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Seitenleiste",
+        "description": "Personen, Module, Quellen, Zeitpläne, PINs und Backups verwaltest du im Admin-Bereich des Mental-Health-Panels.",
+        "data": {
+          "panel": "In der Seitenleiste anzeigen",
+          "panel_title": "Titel in der Seitenleiste (leer = Standard)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "mood_morning": {
+        "name": "Stimmung morgens"
+      },
+      "mood_evening": {
+        "name": "Stimmung abends"
+      },
+      "mood_today": {
+        "name": "Stimmung heute"
+      },
+      "mood_avg7": {
+        "name": "Stimmung Ø 7 Tage"
+      },
+      "mood_avg30": {
+        "name": "Stimmung Ø 30 Tage"
+      },
+      "mood_trend": {
+        "name": "Stimmungstrend"
+      },
+      "mood_forecast": {
+        "name": "Stimmungsprognose"
+      },
+      "energy": {
+        "name": "Energie"
+      },
+      "health_feeling": {
+        "name": "Gesundheitsgefühl"
+      },
+      "sleep_quality": {
+        "name": "Schlafqualität (eigene Einschätzung)"
+      },
+      "health_score": {
+        "name": "Health Score"
+      },
+      "sleep_state": {
+        "name": "Schlafzustand",
+        "state": {
+          "away": "Wach / weg",
+          "in_bed": "Im Bett, wach",
+          "asleep": "Schläft",
+          "nap": "Nickerchen"
+        }
+      },
+      "sleep_duration": {
+        "name": "Letzte Schlafdauer"
+      },
+      "sleep_score": {
+        "name": "Schlaf-Score"
+      },
+      "sleep_week_pct": {
+        "name": "Schlaf ggü. Woche"
+      },
+      "sleep_opt_pct": {
+        "name": "Schlaf ggü. Optimum"
+      },
+      "sleep_optimum": {
+        "name": "Optimale Schlafdauer"
+      },
+      "last_bedtime": {
+        "name": "Zuletzt eingeschlafen"
+      },
+      "last_wake": {
+        "name": "Zuletzt aufgewacht"
+      },
+      "predicted_bedtime": {
+        "name": "Vorhergesagtes Zubettgehen"
+      },
+      "predicted_wake": {
+        "name": "Vorhergesagtes Aufstehen"
+      },
+      "sleep_regularity": {
+        "name": "Schlaf-Regelmäßigkeit"
+      },
+      "sleep_confidence": {
+        "name": "Konfidenz Schlaferkennung"
+      },
+      "weight_profile": {
+        "name": "Gewicht"
+      },
+      "weight_days_since": {
+        "name": "Tage seit letztem Gewicht"
+      },
+      "training_status": {
+        "name": "Trainingsstatus",
+        "state": {
+          "pause": "Pause",
+          "ready_soon": "Bald bereit",
+          "recommended": "Empfohlen",
+          "overdue": "Überfällig"
+        }
+      },
+      "training_days_since": {
+        "name": "Tage seit Training"
+      },
+      "training_soreness": {
+        "name": "Letzter Muskelkater"
+      },
+      "last_training": {
+        "name": "Letztes Training"
+      },
+      "cycle_next_start": {
+        "name": "Nächster Periodenbeginn"
+      },
+      "cycle_next_end": {
+        "name": "Nächstes Periodenende"
+      },
+      "next_morning": {
+        "name": "Nächster Morgen-Check-in"
+      },
+      "next_evening": {
+        "name": "Nächster Abend-Check-in"
+      },
+      "last_checkin": {
+        "name": "Letzter Check-in"
+      },
+      "streak": {
+        "name": "Check-in-Serie"
+      },
+      "age": {
+        "name": "Alter"
+      },
+      "next_birthday": {
+        "name": "Nächster Geburtstag"
+      },
+      "family_mood": {
+        "name": "Familienstimmung heute"
+      },
+      "family_mood_avg7": {
+        "name": "Familienstimmung Ø 7 Tage"
+      },
+      "family_trend": {
+        "name": "Familien-Stimmungstrend"
+      },
+      "family_health": {
+        "name": "Familien-Health-Score"
+      },
+      "family_sleep": {
+        "name": "Familien-Schlaf-Score"
+      },
+      "participation": {
+        "name": "Teilnahme heute"
+      },
+      "birthdays_today": {
+        "name": "Geburtstage heute"
+      },
+      "last_backup": {
+        "name": "Letztes Backup"
+      }
+    },
+    "binary_sensor": {
+      "sleeping": {
+        "name": "Schläft"
+      },
+      "in_bed": {
+        "name": "Im Bett"
+      },
+      "weight_due": {
+        "name": "Gewicht fällig"
+      },
+      "training_recommended": {
+        "name": "Training empfohlen"
+      },
+      "cycle_active": {
+        "name": "Periode aktiv"
+      },
+      "morning_open": {
+        "name": "Morgen-Check-in offen"
+      },
+      "evening_open": {
+        "name": "Abend-Check-in offen"
+      },
+      "birthday_today": {
+        "name": "Geburtstag heute"
+      }
+    },
+    "switch": {
+      "pause": {
+        "name": "Pause (Urlaub, krank)"
+      },
+      "llm_beta": {
+        "name": "LLM-Funktionen (Beta)"
+      }
+    },
+    "button": {
+      "start_morning": {
+        "name": "Morgen-Check-in starten"
+      },
+      "start_evening": {
+        "name": "Abend-Check-in starten"
+      },
+      "create_backup": {
+        "name": "Backup erstellen"
+      }
+    },
+    "select": {
+      "load_level": {
+        "name": "Rechenlast",
+        "state": {
+          "1": "1 – leicht",
+          "2": "2 – ausgewogen",
+          "3": "3 – gründlich"
+        }
+      }
+    }
+  },
+  "issues": {
+    "missing_entity": {
+      "title": "Mental Health: {entity} fehlt",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Fehlende Quelle entfernen",
+            "description": "{entity} (genutzt für {name}) gibt es nicht mehr. Verweis entfernen? Gelerntes und Einträge bleiben erhalten – eine neue Quelle kannst du jederzeit im Profil hinzufügen."
+          }
+        }
+      }
+    },
+    "missing_target": {
+      "title": "Mental Health: Benachrichtigungsziel {entity} fehlt",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Benachrichtigungsziel entfernen",
+            "description": "Check-in-Benachrichtigungen für {name} erreichen {entity} nicht. Ist die Companion App noch angemeldet? Ziel jetzt entfernen und das neue Gerät im Profil hinzufügen."
+          }
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "unknown_person": {
+      "message": "{person} ist in Mental Health nicht eingerichtet."
+    },
+    "admin_only": {
+      "message": "Das dürfen nur Administratoren."
+    },
+    "needs_user": {
+      "message": "Diese Aktion braucht einen angemeldeten Benutzer."
+    },
+    "backup_no_password": {
+      "message": "Lege zuerst im Admin-Bereich ein Backup-Passwort fest."
+    },
+    "backup_wrong_password": {
+      "message": "Das Backup-Passwort ist falsch."
+    },
+    "backup_invalid_file": {
+      "message": "Das ist keine Mental-Health-Backup-Datei."
+    },
+    "backup_not_found": {
+      "message": "Backup-Datei nicht gefunden."
+    },
+    "backup_invalid_name": {
+      "message": "Ungültiger Dateiname."
+    },
+    "backup_password_short": {
+      "message": "Das Backup-Passwort braucht mindestens 8 Zeichen."
+    }
+  },
+  "selector": {
+    "kind": {
+      "options": {
+        "morning": "Morgens",
+        "evening": "Abends"
+      }
+    },
+    "scope": {
+      "options": {
+        "all": "Alles",
+        "config": "Nur Konfiguration"
+      }
+    }
+  },
+  "services": {
+    "start_checkin": {
+      "name": "Check-in starten",
+      "description": "Öffnet einen Check-in für eine Person und benachrichtigt ihre Geräte.",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "Die Person (Personen-Entität)."
+        },
+        "kind": {
+          "name": "Art",
+          "description": "Morgens oder abends."
+        },
+        "window_minutes": {
+          "name": "Antwortfenster",
+          "description": "Wie lange der Check-in offen bleibt (Standard aus den Einstellungen)."
+        }
+      }
+    },
+    "cancel_checkin": {
+      "name": "Check-in abbrechen",
+      "description": "Schließt offene Check-ins und entfernt die Benachrichtigungen.",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "Die Person."
+        },
+        "kind": {
+          "name": "Art",
+          "description": "Leer = beide."
+        }
+      }
+    },
+    "pause_person": {
+      "name": "Person pausieren",
+      "description": "Urlaub oder krank: keine Abfragen, Serien reißen nicht, Prognosen pausieren.",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "Die Person."
+        },
+        "until": {
+          "name": "Bis",
+          "description": "Letzter Pausentag (leer = bis zum Fortsetzen)."
+        }
+      }
+    },
+    "resume_person": {
+      "name": "Person fortsetzen",
+      "description": "Beendet die Pause.",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "Die Person."
+        }
+      }
+    },
+    "create_backup": {
+      "name": "Backup erstellen",
+      "description": "Erstellt ein verschlüsseltes Backup der Integration (Admins)."
+    },
+    "restore_backup": {
+      "name": "Backup wiederherstellen",
+      "description": "Stellt ein Backup aus dem Backup-Ordner wieder her. Vorher wird ein Sicherungspunkt des aktuellen Stands erstellt.",
+      "fields": {
+        "file": {
+          "name": "Datei",
+          "description": "Dateiname in <config>/mental_health/backups."
+        },
+        "password": {
+          "name": "Passwort",
+          "description": "Backup-Passwort."
+        },
+        "scope": {
+          "name": "Umfang",
+          "description": "Was wiederhergestellt wird."
+        }
+      }
+    },
+    "request_setup": {
+      "name": "Einrichtung anfragen",
+      "description": "Bittet die Admins, Mental Health für den aufrufenden Benutzer einzurichten."
+    },
+    "send_test_notification": {
+      "name": "Testbenachrichtigung senden",
+      "description": "Sendet einen Test an alle Benachrichtigungsziele einer Person.",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "Die Person."
+        }
+      }
+    }
+  }
+}

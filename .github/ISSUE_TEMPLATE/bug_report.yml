@@ -1,0 +1,60 @@
+name: Bug report
+description: Something does not work as expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time! **Please never paste journal texts, entries or other personal data here.**
+        The diagnostics download contains no contents – it is safe to attach.
+  - type: input
+    id: version
+    attributes:
+      label: Integration version
+      placeholder: "1.0.0"
+    validations:
+      required: true
+  - type: input
+    id: ha
+    attributes:
+      label: Home Assistant version and installation type
+      placeholder: "2026.11.1, Home Assistant OS"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Check-ins / notifications
+        - Sleep detection
+        - Insights / search
+        - Weight / cycle / training
+        - Admin area / persons / PINs
+        - Backup / restore
+        - Cards / panel / design
+        - LLM beta
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / diagnostics
+      description: Settings → Devices & services → Mental Health → ⋮ → Download diagnostics. Logs contain no contents.
+      render: text
+  - type: input
+    id: device
+    attributes:
+      label: Phone / browser (for notification or card issues)
+      placeholder: "Samsung S25, Android 16, Companion App 2026.10"

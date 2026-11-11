@@ -1,0 +1,25 @@
+{
+  "domain": "mental_health",
+  "name": "Mental Health and Health Improvements for HAOS by Kilian K.",
+  "after_dependencies": [
+    "recorder"
+  ],
+  "codeowners": [
+    "@kilian-haos"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "http",
+    "frontend",
+    "panel_custom",
+    "websocket_api",
+    "repairs"
+  ],
+  "documentation": "https://github.com/kilian-haos/Mental-Health-and-Health-Improvements-for-HAOS-by-Kilian-K.",
+  "integration_type": "hub",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/kilian-haos/Mental-Health-and-Health-Improvements-for-HAOS-by-Kilian-K./issues",
+  "requirements": [],
+  "single_config_entry": true,
+  "version": "1.0.0"
+}

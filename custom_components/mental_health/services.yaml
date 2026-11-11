@@ -1,0 +1,88 @@
+start_checkin:
+  fields:
+    person:
+      required: true
+      example: person.kilian_k
+      selector:
+        entity:
+          domain: person
+    kind:
+      required: true
+      selector:
+        select:
+          translation_key: kind
+          options:
+            - morning
+            - evening
+    window_minutes:
+      selector:
+        number:
+          min: 5
+          max: 1440
+          unit_of_measurement: min
+
+cancel_checkin:
+  fields:
+    person:
+      required: true
+      selector:
+        entity:
+          domain: person
+    kind:
+      selector:
+        select:
+          translation_key: kind
+          options:
+            - morning
+            - evening
+
+pause_person:
+  fields:
+    person:
+      required: true
+      selector:
+        entity:
+          domain: person
+    until:
+      selector:
+        date:
+
+resume_person:
+  fields:
+    person:
+      required: true
+      selector:
+        entity:
+          domain: person
+
+create_backup:
+
+restore_backup:
+  fields:
+    file:
+      required: true
+      example: mental_health_20261111_033000_auto.mhbackup
+      selector:
+        text:
+    password:
+      required: true
+      selector:
+        text:
+          type: password
+    scope:
+      selector:
+        select:
+          translation_key: scope
+          options:
+            - all
+            - config
+
+request_setup:
+
+send_test_notification:
+  fields:
+    person:
+      required: true
+      selector:
+        entity:
+          domain: person

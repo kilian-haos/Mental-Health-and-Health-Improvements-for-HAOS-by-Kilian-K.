@@ -1,0 +1,58 @@
+name: Validate
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  hassfest:
+    name: Hassfest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: home-assistant/actions/hassfest@master
+
+  hacs:
+    name: HACS / Marketplace
+    runs-on: ubuntu-latest
+    # The HACS check moves into Home Assistant (Marketplace, 2026.11) –
+    # a failure of this action must not turn the other checks red.
+    continue-on-error: true
+    steps:
+      - uses: hacs/action@main
+        with:
+          category: integration
+          ignore: brands
+
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Logic, runtime, privacy and translation tests
+        run: |
+          pip install pyyaml cryptography ruff
+          ruff check --select F,E9 .
+          python -m unittest discover -s tests -p "test_*.py" -v
+      - name: Sleep detection report (synthetic data)
+        run: python tools/gen_sleep_data.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Browser test of cards and panel
+        run: |
+          node --check custom_components/mental_health/frontend/mental-health.js
+          node --check custom_components/mental_health/frontend/mental-health-panel.js
+          npm install --no-save playwright@1.47.2
+          npx playwright install --with-deps chromium
+          node tests/browser/run.js tests/browser/out
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: tests/browser/out
+          if-no-files-found: ignore

@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mental Health Harness</title>
+<style>
+  body{ margin:0; background:#0b0c0e; font-family:system-ui; }
+  :root{ --primary-background-color:#0b0c0e; --card-background-color:#17181c; --primary-text-color:#f1f2f4; --secondary-text-color:#868894; }
+  #cards{ display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:16px; padding:16px; }
+</style>
+</head>
+<body>
+<div id="host"></div>
+<script>
+// ---- Simuliertes Backend (gleiches Nachrichtenformat wie die Integration) ----
+const Q = new URLSearchParams(location.search);
+const LANG = Q.get("lang") || "de";
+const USER = Q.get("user") || "adult";            // adult | child | admin | new
+window.__calls = [];
+window.__errors = [];
+const DAY = 86400e3;
+const today = new Date(); today.setHours(12, 0, 0, 0);
+const iso = (d) => new Date(d).toISOString().slice(0, 10);
+const TODAY = iso(today);
+let seed = 7;
+const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+const child = USER === "child";
+const days = [];
+const weights = [];
+for (let i = 140; i >= 1; i--) {
+  const d = iso(+today - i * DAY);
+  const walk = rnd() < .35, sleep_h = +(5.6 + rnd() * 3.2).toFixed(2);
+  const mood = Math.max(1, Math.min(10, Math.round(5 + (walk ? 2 : 0) + (sleep_h - 7) * .8 + (rnd() - .5) * 2)));
+  days.push({ day: d, mood, mood_m: Math.max(1, mood - 1), mood_e: mood, energy: 3 + Math.round(rnd() * 6), health: 6 + Math.round(rnd() * 3),
+    sleep_h, sleep_score: Math.round(55 + rnd() * 40), trained: rnd() < .3, soreness: rnd() < .3 ? 1 : null, period: i % 28 < 5, late: false,
+    weight: null, journal: rnd() < .5, slots: ["morning", "evening"] });
+  if (i % 3 === 0) weights.push({ day: d, kg: +(82 - (140 - i) * 0.02 + (rnd() - .5)).toFixed(1) });
+}
+const night = (dayIso, h0 = 23.4, h1 = 6.9) => {
+  const s = new Date(dayIso + "T00:00:00"); s.setDate(s.getDate() - 1); s.setHours(Math.floor(h0), Math.round((h0 % 1) * 60));
+  const e = new Date(dayIso + "T00:00:00"); e.setHours(Math.floor(h1), Math.round((h1 % 1) * 60));
+  const sm = Math.floor(s / 60000), em = Math.floor(e / 60000);
+  return { start: s.toISOString(), end: e.toISOString(), start_m: sm, end_m: em, asleep: em - sm - 14, score: 82, int: 2, int_min: 14, naps: 0, conf: 0.42, src: "auto",
+    segments: [{ s: sm + 120, e: sm + 128 }, { s: sm + 300, e: sm + 306 }], comps: { duration: 88, regularity: 79, interruptions: 72, subjective: 78 } };
+};
+const nights = [];
+for (let i = 0; i < 14; i++) { const d = iso(+today - i * DAY); nights.push(Object.assign({ day: d }, night(d, 23 + rnd(), 6.5 + rnd()))); }
+const me = USER === "new" ? { version: "1.0.0", is_admin: false, admin_pin: false, setup: false, request: null, persons: 3, llm: { enabled: false }, settings_public: {} }
+  : { version: "1.0.0", is_admin: USER === "admin", admin_pin: false, setup: true, pid: "p1", name: child ? "Lena K" : "Kilian K", child, has_pin: false, persons: 3,
+    llm: { enabled: !child }, settings_public: { evening_from: "14:00" },
+    modules: { mood: true, energy: true, health: true, sleep_quality: true, sleep_tracking: true, good_bad: true, goals: true, journal: true, weight: !child, training: true, cycle: child ? false : true, birthday: true, suggestions: true, llm: !child },
+    rights: Object.fromEntries(["manage_persons", "profile_view", "profile_edit", "weight_view", "weight_edit", "target_weight_edit", "modules_edit", "schedule_edit", "pause", "own_pin", "reset_pin", "content", "checkin", "llm_consent", "admin_area", "backup"]
+      .map((k) => [k, { ok: child ? ["profile_view", "weight_view", "own_pin", "content", "checkin"].includes(k) : !["manage_persons", "reset_pin", "admin_area", "backup"].includes(k) || USER === "admin", why: child ? "child" : "admin_only" }])) };
+const profile = { id: "p1", person_entity: child ? "person.lena_k" : "person.kilian_k", user_id: "u1", name: me.name || "Neu", child, can_edit_own: !child, birthdate: child ? "2016-03-02" : "1990-05-17",
+  sex: child ? "female" : "male", height_cm: child ? 142 : 182, weight_kg: child ? null : 80.4, weight_live: false, weight_entity: null, target_weight: null,
+  modules: me.modules || {}, sleep_sources: [{ id: "bed", entity: "sensor.esp_32_01_master_bed_sensor", kind: "numeric", role: "in_bed", on_means: true, threshold: null, direction: null, mapping: {}, shared_with: [] }],
+  cycle_sources: [], alarm_entity: null,
+  schedule: { morning: { mode: "fixed", times: Array(7).fill("07:30"), entity: null, offset_min: 0 }, evening: { mode: "sleep", times: Array(7).fill("21:00"), entity: null, offset_min: 0 }, sleep_gap_min: 20 },
+  targets: [{ id: "t1", kind: "service", service: "notify.mobile_app_s25", platform: "auto", name: "s25" }],
+  notify: { details: false, remind: true, later: true, persist: true, importance: "high", ios_level: "time-sensitive", weekly: true }, pause: null,
+  llm_child_allowed: false, llm_consent: true, pin_session_min: 30, cycle_child_allowed: false };
+const status = { morning: { state: Q.get("open") === "morning" ? "open" : "done", until: new Date(Date.now() + 40 * 60000).toISOString(), next: null },
+  evening: { state: Q.get("open") === "evening" ? "open" : null, until: new Date(Date.now() + 40 * 60000).toISOString(), next: null } };
+function dashboard() {
+  const last = days[days.length - 1];
+  return { today: TODAY, now: new Date().toISOString(), status, evening_open_from: "14:00", evening_manual: true,
+    values: { mood_today: 7.5, mood_morning: 7, mood_evening: 8, mood_avg7: 6.9, mood_avg30: 6.4, mood_trend: 0.5, streak: 23, health_score: 78 },
+    forecast: { ready: true, value: 7.2, low: 6.3, high: 8.1, confidence: 0.71, reasons: [{ key: "x_sleep", effect: 0.6 }, { key: "x_trained", effect: 0.4 }] },
+    forecast_tomorrow: null, forecast_history: days.slice(-40).map((d) => ({ day: d.day, p: Math.max(1, Math.min(10, d.mood + (rnd() - .5) * 1.4)), a: d.mood })),
+    sleep: { enabled: true, today: night(TODAY), maxing: { optimum_min: 465, last_min: 420, week_pct: 6, week_color: "good", opt_pct: -9, opt_color: "bad" }, optimum_h: 7.75,
+      state: "away", learning: true, night_of: 3, nights, range: [7, 9] },
+    weight: child ? null : { trend: 80.6, week_avg: 80.9, delta_week: -0.3, delta_opt: 9.4, optimum: 71.2, range: [61.3, 82.5], color_week: "good", color_opt: "neutral", hint: null, due: "none", days_since: 2 },
+    weights: child ? [] : weights,
+    training: { status: "recommended", days_since: 3, overdue: 0, soreness: 1, highlight: false, child },
+    cycle: child ? null : null,
+    health: { score: 78, comps: { mood: 72, stability: 81, energy: 66, health: 77, sleep: 84, training: 85, regularity: 92 } },
+    birthdays: [{ name: "Anna", days: 0, self: false, turning: 41 }, { name: "Lena", days: 9, self: false, turning: 11 }],
+    protect: Q.get("protect") === "1", child, days: days.slice().reverse().concat([]).map((x) => x), streak: 23,
+    insights: [], topics: {}, goals: [], on_this_day: [{ when: "month", day: iso(+today - 30 * DAY), mood: 8, good: ["Konzert mit dem Chor"] }],
+    jar: { day: iso(+today - 50 * DAY), text: "Sonnenuntergang am See" }, locked_analysis: false, missing: [], paused: false, pause: null };
+}
+const form = (slot) => ({ slot, day: TODAY, allowed: true, late: false, open: true, child,
+  fields: slot === "morning" ? [
+    { key: "greeting", type: "info", required: false, opts: { forecast: dashboard().forecast } },
+    { key: "sleep", type: "sleep", required: false, opts: Object.assign(night(TODAY), { maxing: dashboard().sleep.maxing, optimum_h: 7.75, ask: true, learning: 3 }) },
+    ...(child ? [] : [{ key: "weight_info", type: "info", required: false, opts: dashboard().weight }]),
+    { key: "mood", type: "scale10", required: true },
+    { key: "energy", type: "scale10", required: false },
+    { key: "sleep_quality", type: "scale10", required: false },
+    { key: "health", type: "scale10", required: false },
+    { key: "soreness", type: "scale3", required: true },
+    { key: "training_info", type: "info", required: false, opts: { status: "recommended", overdue: 0, child } },
+    { key: "goals_review", type: "goals_review", required: false, opts: { goals: [{ id: "g1", text: LANG === "de" ? "Früher ins Bett" : "Go to bed earlier" }] } },
+    { key: "birthday_info", type: "info", required: false, opts: { people: [{ name: "Anna", days: 0, self: false }] } },
+  ] : [
+    { key: "mood", type: "scale10", required: true }, { key: "energy", type: "scale10", required: false }, { key: "health", type: "scale10", required: false },
+    { key: "good", type: "texts", required: true, opts: { min: 1, max: 3, maxlen: 200 } }, { key: "bad", type: "texts", required: true, opts: { min: 1, max: 2, maxlen: 200 } },
+    { key: "goals", type: "texts", required: false, opts: { min: 0, max: 3, maxlen: 200 } }, { key: "journal", type: "text", required: false, opts: { maxlen: 4000 } },
+    { key: "trained", type: "yesno", required: true, opts: { types: ["strength", "cardio", "endurance", "mobility", "team", "other"] } },
+    ...(child ? [] : [{ key: "weight", type: "number", required: false, opts: { min: 2, max: 400, step: 0.1, unit: "kg", due: "warn" } },
+      { key: "period", type: "choice", required: true, opts: { options: ["no", "yes", "started", "ended"], flow: ["light", "medium", "heavy", "very_heavy"], symptoms: ["cramps", "headache", "fatigue", "mood"] } }]),
+  ], existing: null, draft: null });
+function validate(slot, data) {
+  const f = form(slot), err = {};
+  for (const fd of f.fields) {
+    if (!fd.required) continue;
+    const v = data[fd.key];
+    if (fd.type === "texts") { if (!Array.isArray(v) || v.filter((x) => String(x).trim()).length < fd.opts.min) err[fd.key] = "min_items"; }
+    else if (fd.type === "yesno") { if (!v || typeof v.done !== "boolean") err[fd.key] = "required"; }
+    else if (fd.type === "choice") { if (!v || !v.answer) err[fd.key] = "required"; }
+    else if (v == null) err[fd.key] = "required";
+  }
+  return err;
+}
+const adminPayload = () => ({
+  persons: [{ profile, has_pin: false, picture: null, model: { sleep: { maturity: 0.4, learning: true, nights: 5, labels: 2 }, mood_days: 30, optimum: null }, participation: 0.86, status: { morning: false, evening: true }, age: 36 },
+    { profile: Object.assign({}, profile, { id: "p2", name: "Anna K", child: false, sex: "female" }), has_pin: true, picture: null, model: { sleep: { maturity: 1, learning: false, nights: 40, labels: 9 } }, participation: 0.71, status: {}, age: 41 },
+    { profile: Object.assign({}, profile, { id: "p3", name: "Lena K", child: true }), has_pin: false, picture: null, model: { sleep: { maturity: 0.1, learning: true, nights: 1, labels: 0 } }, participation: 0.5, status: {}, age: 10 }],
+  ha_persons: [{ entity_id: "person.kilian_k", name: "Kilian K", user_id: "u1", taken: true, eligible: true }, { entity_id: "person.tom_k", name: "Tom K", user_id: "u9", taken: false, eligible: true },
+    { entity_id: "person.gast", name: "Gast", user_id: null, taken: false, eligible: false }],
+  settings: { day_boundary: "04:00", evening_from: "14:00", morning_until: "14:00", window_min: 60, remind_min: 15, late_entry: "day_end", nightly: "03:30", load_level: 2, family_k: 3,
+    low_mood_days: 3, low_mood_max: 3, request_cooldown_h: 24, weekly_report: true, workday_entity: null, weather_entity: null, daylight_entity: null, admin_pin: false, admin_targets: [],
+    llm: { enabled: false, mode: "ai_task", entity: null, agent: null, accepted: false }, backup: { auto: "weekly", keep: 8, password: true } },
+  requests: [{ user_id: "u9", ts: Date.now() / 1000 - 3600, name: "Tom K" }], notify_services: ["notify.mobile_app_s25", "notify.mobile_app_ipad"],
+  backups: [{ name: "mental_health_20261110_033000_auto.mhbackup", size: 182000, mtime: Date.now() / 1000 - 86400 }], backup_info: {}, llm_state: {}, version: "1.0.0",
+  llm_caps: { ai_task: true, conversation: true, ai_task_entities: ["ai_task.openai"], agents: ["conversation.home_assistant"] } });
+const sleepModel = { maturity: 0.43, learning: true, nights: 5, labels: 2, night_of: 6, nights_needed: 14,
+  prior: Array.from({ length: 48 }, (_, i) => { const h = i / 2; return h >= 23 || h < 6.5 ? 0.9 : h >= 21 ? 0.1 + 0.4 * (h - 21) : h < 9 ? 0.6 - 0.2 * (h - 6.5) : 0.03; }),
+  channels: {}, bias: { onset: 12, wake: 3 }, levels: { bed: { baseline: 3.1, threshold: 2.71, learned: 2.68, direction: -1, levels: [1.7], minutes: 9000 } },
+  history: nights.slice(0, 5).map((n) => ({ day: n.day, asleep: n.asleep, conf: 0.4, src: "confirmed" })), state: "away", sources: profile.sleep_sources };
+function preview() {
+  const start = Math.floor(Date.now() / 60000) - 48 * 60, vals = [];
+  for (let i = 0; i < 48 * 12; i++) {
+    const h = ((new Date((start + i * 5) * 60000)).getHours() + (new Date((start + i * 5) * 60000)).getMinutes() / 60);
+    let v = 3.1 + (rnd() - .5) * .05;
+    if ((h > 20.2 && h < 20.4) || (h > 20.6 && h < 20.8)) v = 1.2;
+    if (h > 6.5 && h < 7.9) v = 2.3 - (h - 6.5) * .7;
+    vals.push(+v.toFixed(3));
+  }
+  return { start, step: 5, values: vals, sleep: { start: start + 23 * 60, end: start + 31 * 60, kind: "sleep" }, naps: [], in_bed: [], p_sleep: [], level: sleepModel.levels.bed, states: ["3.1"] };
+}
+const handlers = {
+  me: () => me,
+  dashboard: () => dashboard(),
+  form: (m) => form(m.slot),
+  submit: (m) => { const e = validate(m.slot, m.data); return Object.keys(e).length ? { ok: false, errors: e } : { ok: true, info: {} }; },
+  draft: () => ({ ok: true }),
+  day: (m) => { const d = days.find((x) => x.day === m.day) || { day: m.day, slots: [] }; return Object.assign({}, d, { good: ["Spaziergang im Wald"], bad: ["Regen"], goals: ["Früher ins Bett"], journal: d.journal ? "Ein ruhiger Tag. Abends Probe mit dem Chor." : null,
+    sleep: night(m.day), edits: { morning: [], evening: ["x"] }, entries: { morning: { mood: d.mood_m, energy: d.energy }, evening: { mood: d.mood_e, trained: { done: !!d.trained } } } }); },
+  search: (m) => ({ results: days.slice(-12).reverse().filter((d) => !m.query || d.mood >= 6).map((d) => ({ day: d.day, score: 1.2, hits: ["wald"], mood: d.mood, good: ["Spaziergang im Wald"], bad: [], journal: "Wald und Sonne", trained: d.trained, sleep_h: d.sleep_h, period: false })),
+    chips: m.chips || [{ k: "polarity", v: "negative" }, { k: "range", start: iso(+today - 40 * DAY), end: iso(+today - 10 * DAY) }, { k: "term", v: "wald" }], llm: !!m.llm }),
+  insights: () => ({ week: { cur: { mood: 7.1, sleep_h: 7.3, trainings: 3, good_count: 12, highlights: ["Konzert", "Sauna"] }, delta: { mood: 0.4 } },
+    month: { cur: { mood: 6.8, sleep_h: 7.1, trainings: 9, good_count: 44, highlights: [] }, delta: { mood: -0.2 } },
+    derived: { insights: [{ key: "i_best_days", params: { items: [{ topic: "nature" }, { word: "Chor" }] }, tone: "good" }, { key: "i_sleep_mood", params: { hours: 6.5, diff: 1.8 }, tone: "info" },
+      { key: "i_goal", params: { text: "früher ins Bett", done: 4, n: 7 }, tone: "good" }],
+      topics: { good: [{ topic: "nature", effect: 1.6, days: 14 }, { topic: "friends", effect: 1.1, days: 9 }], bad: [{ topic: "stress", effect: -1.4, days: 6 }] },
+      goals: [{ text: "Früher ins Bett", n: 7, done: 4, partly: 1, not: 2, rate: .64, recurring: true }] } }),
+  family: () => ({ k: 3, enough: true, weather: "mostly_sunny", mood: 7.2, health: 76, history: days.slice(-30).map((d) => ({ day: d.day, mood: Math.min(10, d.mood * .9 + 1), n: 3 })), participation: 67,
+    birthdays: [{ name: "Anna", days: 0, turning: 41 }, { name: "Lena", days: 9, turning: 11 }], members: 3 }),
+  profile: () => ({ profile, rights: me.rights, weight_hidden: false, weight_why: "", self: true, has_pin: false, picture: null, age: child ? 10 : 36, missing: [],
+    notify_services: ["notify.mobile_app_s25", "notify.mobile_app_ipad"], platforms: { t1: "android" } }),
+  profile_update: (m) => { Object.assign(profile, m.changes); return Object.assign(handlers.profile(), { refused: {} }); },
+  set_pin: () => ({ ok: true, has_pin: true, token: "tok" }),
+  unlock: () => ({ ok: true, token: "tok" }),
+  test_notification: () => ({ sent: 1, targets: 1 }),
+  sleep_model: () => sleepModel,
+  sleep_reset: () => ({ ok: true }),
+  source_preview: () => preview(),
+  export: (m) => ({ format: m.format, content: "{}" }),
+  import: () => ({ added: 0 }),
+  llm: () => ({ ok: true, text: LANG === "de" ? "Eine ruhige Woche mit viel Natur." : "A calm week with lots of nature." }),
+  pause: () => ({ ok: true }),
+  request_setup: () => { me.request = { ts: Date.now() / 1000, next: Date.now() / 1000 + 86400 }; return { ok: true, sent: true }; },
+  admin: () => adminPayload(),
+  admin_settings: () => adminPayload(), admin_llm: (m) => ({ llm: m.changes }), admin_create_person: () => ({ pid: "p9" }), admin_delete_person: () => ({ ok: true }),
+  admin_set_pin: () => ({ ok: true }), admin_reset_pin: () => ({ ok: true, lost: 3 }), admin_dismiss_request: () => ({ ok: true }), admin_unlock: () => ({ ok: true, token: "a" }),
+  backup_password: () => ({ ok: true }), backup_create: () => ({ name: "x.mhbackup" }), backup_preview: () => ({ created: new Date().toISOString(), version: "1.0.0", format: 1, persons: [{ id: "p1", name: "Kilian", days: 140 }], size: 182000 }),
+  backup_restore: () => ({ ok: true }),
+};
+const states = { "sensor.esp_32_01_master_bed_sensor": { state: "3.13" }, "notify.family": { state: "unknown" }, "script.push_an_ein_gerat": { state: "off" }, "sun.sun": { state: "above_horizon" } };
+window.hass = {
+  language: LANG, locale: { language: LANG }, user: { id: "u1", is_admin: USER === "admin", name: "Kilian" }, states,
+  callWS: async (msg) => {
+    const type = msg.type.replace("mental_health/", "");
+    window.__calls.push(msg);
+    await new Promise((r) => setTimeout(r, 15));
+    if (!handlers[type]) throw { code: "unknown_command", message: type };
+    return JSON.parse(JSON.stringify(handlers[type](msg)));
+  },
+  connection: { subscribeMessage: async (cb) => { window.__push = cb; return () => {}; } },
+  fetchWithAuth: async () => ({ ok: true, blob: async () => new Blob(["x"]), json: async () => ({ name: "up.mhbackup" }) }),
+};
+window.addEventListener("error", (e) => window.__errors.push(String(e.message)));
+window.addEventListener("unhandledrejection", (e) => window.__errors.push(String(e.reason && (e.reason.message || e.reason.code || e.reason))));
+</script>
+<script type="module">
+await import("../../custom_components/mental_health/frontend/mental-health.js?v=t&p=t");
+const Q = new URLSearchParams(location.search);
+const host = document.getElementById("host");
+if ((Q.get("view") || "panel") === "panel") {
+  if (Q.get("tab")) localStorage.setItem("mh_tab", JSON.stringify(Q.get("tab")));
+  await window.__MH.loadPanel();
+  const el = document.createElement("mental-health-panel");
+  el.narrow = innerWidth < 760;
+  host.appendChild(el);
+  el.hass = window.hass;
+  window.__panel = el;
+} else {
+  host.id = "cards";
+  for (const t of ["person", "family", "sleep", "weight", "training", "mood-chart", "birthday", "checkin"]) {
+    const c = document.createElement(`mental-health-${t}-card`);
+    c.setConfig({ type: `custom:mental-health-${t}-card` });
+    host.appendChild(c);
+    c.hass = window.hass;
+  }
+}
+window.__ready = true;
+</script>
+</body>
+</html>

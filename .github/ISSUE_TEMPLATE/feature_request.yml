@@ -1,0 +1,20 @@
+name: Feature request
+description: An idea to make Mental Health better
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would you like to do?
+      description: Describe the situation and what is missing today.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+  - type: textarea
+    id: privacy
+    attributes:
+      label: Privacy considerations
+      description: Would the idea expose personal data to other people in the household or to cloud services?

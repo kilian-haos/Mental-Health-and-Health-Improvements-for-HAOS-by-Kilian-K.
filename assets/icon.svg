@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#16262a"/><stop offset="1" stop-color="#0a1012"/></linearGradient>
+    <radialGradient id="halo" cx="128" cy="132" r="130" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2fd6b0" stop-opacity="0.42"/><stop offset="0.6" stop-color="#2fd6b0" stop-opacity="0.10"/><stop offset="1" stop-color="#2fd6b0" stop-opacity="0"/></radialGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#2fd6b0" stop-opacity="0.7"/><stop offset="1" stop-color="#2fd6b0" stop-opacity="0"/></radialGradient>
+    <radialGradient id="aglow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#a78bfa" stop-opacity="0.6"/><stop offset="1" stop-color="#a78bfa" stop-opacity="0"/></radialGradient>
+    <clipPath id="tile"><rect x="8" y="8" width="240" height="240" rx="56"/></clipPath>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="url(#bg)"/>
+  <g clip-path="url(#tile)"><rect x="0" y="0" width="256" height="256" fill="url(#halo)"/>
+    <circle cx="128" cy="128" r="78" fill="none" stroke="#2fd6b0" stroke-opacity="0.18" stroke-width="12"/>
+    <circle cx="128" cy="128" r="78" fill="none" stroke="#2fd6b0" stroke-width="12" stroke-linecap="round" pathLength="100" stroke-dasharray="72 100" transform="rotate(-90 128 128)"/>
+    <circle cx="128" cy="50" r="18" fill="url(#glow)"/>
+    <circle cx="128" cy="50" r="7" fill="#e9fffa"/>
+    <path d="M131 82 A 34 34 0 1 0 150 132 A 26 26 0 1 1 131 82 Z" fill="#a78bfa" fill-opacity="0.95" stroke="#efe9ff" stroke-width="3" stroke-opacity="0.85" stroke-linejoin="round"/>
+    <path d="M78 164 Q 95 150 112 164 T 146 164 T 180 164" fill="none" stroke="#2fd6b0" stroke-width="8" stroke-linecap="round"/>
+  </g>
+  <rect x="8.5" y="8.5" width="239" height="239" rx="55.5" fill="none" stroke="#ffffff" stroke-opacity="0.06"/>
+</svg>
