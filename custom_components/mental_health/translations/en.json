@@ -369,7 +369,7 @@
       "fields": {
         "file": {
           "name": "File",
-          "description": "File name in <config>/mental_health/backups."
+          "description": "File name in the folder mental_health/backups inside your configuration folder."
         },
         "password": {
           "name": "Password",
