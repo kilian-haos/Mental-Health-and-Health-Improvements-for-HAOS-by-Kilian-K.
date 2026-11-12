@@ -230,8 +230,10 @@ class MHRuntime:
                 return p
         return None
 
-    def viewer(self, user: Any) -> PM.Viewer:
-        return PM.Viewer(getattr(user, "id", None), bool(getattr(user, "is_admin", False)))
+    def viewer(self, user: Any, admin_tok: str | None = None) -> PM.Viewer:
+        """Viewer for the permission matrix. A non-admin with an admin-PIN session counts as admin."""
+        uid = getattr(user, "id", None)
+        return PM.Viewer(uid, bool(getattr(user, "is_admin", False)) or self.admin_elevated(uid, admin_tok))
 
     def ha_persons(self) -> list[dict]:
         """All person.* with linked users (for the admin's person picker)."""
@@ -465,8 +467,75 @@ class MHRuntime:
     def admin_session_ok(self, user_id: str | None, tok: str | None) -> bool:
         if not self.admin_pin_set():
             return True
+        return self._admin_session(user_id, tok) is not None
+
+    def _admin_session(self, user_id: str | None, tok: str | None) -> dict | None:
         s = self.sessions.get(tok or "")
-        return bool(s and s["kind"] == "admin" and s["user_id"] == user_id and s["exp"] > time.time())
+        if s and s["kind"] == "admin" and s["user_id"] == user_id and s["exp"] > time.time():
+            return s
+        return None
+
+    def admin_elevated(self, user_id: str | None, tok: str | None) -> bool:
+        """A non-admin user who entered the admin PIN – admin rights for this one session only."""
+        s = self._admin_session(user_id, tok)
+        return bool(s and s.get("elevated"))
+
+    def admin_access(self, user: Any, tok: str | None) -> bool:
+        """May this user use the admin area right now?"""
+        uid = getattr(user, "id", None)
+        if getattr(user, "is_admin", False):
+            return not self.admin_pin_set() or self._admin_session(uid, tok) is not None
+        return self.admin_pin_set() and self.admin_elevated(uid, tok)
+
+    async def async_unlock(self, user: Any, pin: str) -> dict:
+        """One PIN field for everything.
+
+        * Personal PIN -> personal session (texts readable). An HA admin additionally gets the
+          admin area (no second PIN needed).
+        * Admin PIN entered instead -> admin rights for this session only (also for non-admin
+          users), with an "admin" hint in the UI. It never decrypts anyone's texts.
+        """
+        uid = getattr(user, "id", None)
+        is_admin = bool(getattr(user, "is_admin", False))
+        key = self._fail_key("user", uid or "")
+        if self._locked_until(key):
+            return {"ok": False, "locked_until": self._locked_until(key)}
+        p = self.person_for_user(uid)
+        res: dict[str, Any] = {"ok": False}
+        if p is not None and self.keyring.has_pin(p.pid):
+            try:
+                tek = await self.hass.async_add_executor_job(self.keyring.tek_with_pin, p.pid, pin)
+            except CryptoError:
+                tek = None
+            if tek is not None:
+                p.vault.tek = tek
+                exp = time.time() + 60 * p.profile["pin_session_min"]
+                tok = token()
+                self.sessions[tok] = {"kind": "person", "pid": p.pid, "user_id": uid, "exp": exp}
+                res = {"ok": True, "token": tok, "exp": exp, "elevated": False}
+                if is_admin and self.admin_pin_set():
+                    atok = token()
+                    self.sessions[atok] = {"kind": "admin", "user_id": uid, "exp": exp, "elevated": False, "via": "person"}
+                    res["admin_token"] = atok
+                self.hass.async_create_task(self._catch_up_analysis(p.pid))
+        if not res["ok"] and self.admin_pin_set():
+            if await self.hass.async_add_executor_job(verify_secret, pin, self.settings.get("admin_pin")):
+                atok = token()
+                exp = time.time() + 15 * 60
+                self.sessions[atok] = {"kind": "admin", "user_id": uid, "exp": exp, "elevated": not is_admin}
+                res = {"ok": True, "admin_token": atok, "exp": exp, "elevated": not is_admin}
+        if res["ok"]:
+            self.pin_fails.pop(key, None)
+            return res
+        return {"ok": False, **self._register_fail(key)}
+
+    def lock_user(self, user_id: str | None) -> None:
+        """Lock now: end all sessions of this user (personal and admin)."""
+        for k in [k for k, s in self.sessions.items() if s.get("user_id") == user_id]:
+            self.sessions.pop(k, None)
+        p = self.person_for_user(user_id)
+        if p is not None and self.keyring.has_pin(p.pid):
+            p.vault.tek = None
 
     async def async_set_admin_pin(self, pin: str | None) -> None:
         if pin is not None and (len(pin) != 4 or not pin.isdigit()):
@@ -1317,10 +1386,12 @@ class MHRuntime:
         self._after_structure_change()
 
     # ================================================================ Payloads für die Karte
-    def me_payload(self, user: Any) -> dict:
-        v = self.viewer(user)
+    def me_payload(self, user: Any, admin_tok: str | None = None) -> dict:
+        v = self.viewer(user, admin_tok)
         p = self.person_for_user(v.user_id)
         base = {"version": VERSION, "is_admin": v.is_admin, "admin_pin": self.admin_pin_set(),
+                "ha_admin": bool(getattr(user, "is_admin", False)), "admin_access": self.admin_access(user, admin_tok),
+                "admin_elevated": self.admin_elevated(v.user_id, admin_tok),
                 "settings_public": {"evening_from": self.settings["evening_from"],
                                     "morning_until": self.settings["morning_until"],
                                     "family_k": self.settings["family_k"]},

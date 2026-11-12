@@ -11,6 +11,10 @@ const { esc, clamp, reduced, fmtNum, fmtTime, fmtDate, fmtDur, sign, moodEmoji, 
 
 /* ============================================================ Texte (Panel) */
 Object.assign(M.I18N.en, {
+  pin_sub_both: "Your personal PIN – or the admin PIN for admin access in this session.", pin_sub_admin: "Enter the admin PIN for admin access in this session.",
+  admin_in: "Signed in as admin for this session", admin_in_short: "Admin", admin_in_hint: "Admin rights via the admin PIN – only for this session.",
+  admin_end: "End admin", enter_code: "Enter code", lock_now: "Lock now", locked_now: "Locked",
+  s_pick_entity: "Choose an entity above – the last 48 h appear here with the model's detection.",
   tab_today: "Today", tab_insights: "Insights", tab_history: "History", tab_family: "Family", tab_profile: "Profile", tab_admin: "Admin",
   guide: "Guide", guide_title: "How it works",
   g_1: "<b>Check-in</b>: morning and evening, under a minute. Mandatory fields are marked with a dot.",
@@ -123,6 +127,10 @@ Object.assign(M.I18N.en, {
   dismiss: "Dismiss", setup_for: "Set up", no_persons: "No persons yet – add the first one.",
 });
 Object.assign(M.I18N.de, {
+  pin_sub_both: "Deine persönliche PIN – oder die Admin-PIN für Admin-Zugriff in dieser Sitzung.", pin_sub_admin: "Admin-PIN eingeben für Admin-Zugriff in dieser Sitzung.",
+  admin_in: "Für diese Sitzung als Admin angemeldet", admin_in_short: "Als Admin drin", admin_in_hint: "Admin-Rechte über die Admin-PIN – nur für diese Sitzung.",
+  admin_end: "Admin beenden", enter_code: "Code eingeben", lock_now: "Jetzt sperren", locked_now: "Gesperrt",
+  s_pick_entity: "Wähle oben eine Entität – hier erscheinen dann die letzten 48 h mit der Erkennung des Modells.",
   tab_today: "Heute", tab_insights: "Insights", tab_history: "Verlauf", tab_family: "Familie", tab_profile: "Profil", tab_admin: "Admin",
   guide: "Anleitung", guide_title: "So funktioniert's",
   g_1: "<b>Check-in</b>: morgens und abends, unter einer Minute. Pflichtfelder haben einen Punkt.",
@@ -249,7 +257,7 @@ const PCSS = `
 .guide .gbody{ transition:opacity .25s var(--ease); }
 .guide p{ font-size:13px; color:var(--c-muted); line-height:1.5; margin:9px 0; }
 .guide b{ color:var(--c-text); }
-.main{ flex:1; min-width:0; display:grid; gap:14px; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); align-content:start; }
+.main{ flex:1; min-width:0; display:grid; gap:14px; grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),1fr)); align-content:start; }
 .main > .wide{ grid-column:1 / -1; }
 .sec{ background:var(--c-surface); border-radius:var(--rad); padding:18px; position:relative; overflow:hidden; }
 .sec h3{ margin:0 0 12px; font-size:16px; font-weight:600; display:flex; align-items:center; gap:8px; }
@@ -274,9 +282,9 @@ const PCSS = `
 .bars > div{ height:100%; display:flex; flex-direction:column; justify-content:flex-end; }
 .bars .b{ border-radius:8px 8px 4px 4px; background:var(--c-teal); min-height:3px; position:relative; transition:height .6s var(--ease); }
 .bars .lb{ font-size:10.5px; color:var(--c-muted); text-align:center; margin-top:4px; }
-.comp{ display:flex; align-items:center; gap:10px; font-size:13px; margin:7px 0; }
-.comp .clabel{ flex:0 0 132px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.comp .bar{ flex:1; min-width:40px; height:8px; background:var(--c-raise2); border-radius:4px; overflow:hidden; }
+.comp{ display:grid; grid-template-columns:minmax(0,1fr) minmax(48px,42%) auto; align-items:center; gap:10px; font-size:13px; margin:7px 0; }
+.comp .clabel{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.comp .bar{ min-width:0; height:8px; background:var(--c-raise2); border-radius:4px; overflow:hidden; }
 .comp .bar i{ display:block; height:100%; border-radius:4px; background:var(--c-teal); transform-origin:left; animation:mh-grow .9s var(--ease) both; }
 @keyframes mh-grow{ from{ transform:scaleX(0) } }
 .cal{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
@@ -306,22 +314,32 @@ canvas.model{ width:100%; height:240px; display:block; border-radius:var(--rad-i
 .steps{ display:flex; gap:6px; margin-bottom:14px; }
 .steps i{ flex:1; height:4px; border-radius:2px; background:var(--c-raise2); transition:background .3s; }
 .steps i.on{ background:var(--c-teal); }
-.wd-times{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
-.wd-times input{ padding:8px 4px; text-align:center; font-size:13px; }
-.wd-times span{ font-size:11px; color:var(--c-muted); text-align:center; }
-.dmask{ display:inline-flex; align-items:center; gap:5px; flex-wrap:nowrap; }
-.dmask input{ width:clamp(26px,7.4vw,36px); height:46px; padding:0; text-align:center; font-size:19px; font-weight:600; border-radius:11px; caret-color:var(--c-teal);
-  font-variant-numeric:tabular-nums; transition:border-color .2s var(--ease), background .2s, transform .16s var(--spring); }
-.dmask input.filled{ background:var(--c-active); color:var(--c-teal); animation:mh-pop .22s var(--spring); }
+.wd-times{ display:grid; grid-template-columns:repeat(auto-fill,minmax(104px,1fr)); gap:8px; }
+.wd-times .wd{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+.wd-times .wd span{ font-size:11px; color:var(--c-muted); padding-left:4px; }
+.wd-times input{ padding:8px 8px 8px 10px; font-size:14px; min-width:0; font-variant-numeric:tabular-nums; }
+.wd-times input::-webkit-calendar-picker-indicator{ opacity:.55; margin-left:2px; cursor:pointer; }
+.modes{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+.modes .chip{ padding:8px 13px; font-size:13px; }
+.modes .chip:disabled{ opacity:.4; }
+.admin-flag{ display:inline-flex; align-items:center; gap:6px; }
+.kbtn{ padding:8px 12px; font-size:15px; }
+.dm-row{ display:flex; align-items:center; gap:6px; width:100%; max-width:380px; }
+.dmask{ display:flex; align-items:center; gap:4px; flex:1 1 auto; min-width:0; }
+.dmask .grp{ display:flex; gap:4px; min-width:0; }
+.dmask .grp.dg, .dmask .grp.mg{ flex:2 1 0; }
+.dmask .grp.yg{ flex:4 1 0; }
+.dmask input{ flex:1 1 0; min-width:0; width:100%; max-width:42px; height:46px; padding:0; text-align:center; font-size:19px; font-weight:600; border-radius:11px;
+  caret-color:var(--c-teal); font-variant-numeric:tabular-nums; transition:border-color .2s var(--ease), background .2s, transform .16s var(--spring); }
+.dmask input.filled{ background:var(--c-active); color:var(--c-teal); }
+.dmask input.pop{ animation:mh-pop .22s var(--spring); }
 .dmask input:focus{ transform:translateY(-1px); }
-.dmask input::placeholder{ color:var(--c-muted); opacity:.45; font-weight:500; font-size:13px; }
-.dmask .sep{ color:var(--c-muted); font-size:20px; width:8px; text-align:center; }
-.dmask .grp{ display:inline-flex; gap:5px; }
+.dmask input::placeholder{ color:var(--c-muted); opacity:.5; font-weight:500; font-size:13px; }
+.dmask input:focus::placeholder{ color:transparent; }
+.dmask .sep{ color:var(--c-muted); font-size:20px; flex:0 0 8px; text-align:center; }
 .dmask.err input{ border-color:var(--c-red); }
-.dmask.ok input.filled{ border-color:transparent; }
 .dmask[aria-disabled="true"]{ opacity:.55; pointer-events:none; }
-.dm-row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-.dm-clear{ padding:6px 10px; font-size:13px; }
+.dm-clear{ padding:6px 10px; font-size:13px; flex:0 0 auto; }
 .lock{ display:grid; place-items:center; min-height:60vh; text-align:center; gap:14px; }
 .dialog > div:first-child{ white-space:pre-line; }
 .note{ font-size:11.5px; color:var(--c-muted); text-align:center; margin-top:18px; }
@@ -354,12 +372,12 @@ function dateMaskHtml(key, value, lang, opts = {}) {
   const sep = lang === "de" ? "." : "/";
   const ph = lang === "de" ? ["T", "T", "M", "M", "J", "J", "J", "J"] : ["D", "D", "M", "M", "Y", "Y", "Y", "Y"];
   const lab = lang === "de" ? ["Tag", "Monat", "Jahr"] : ["Day", "Month", "Year"];
-  const cell = (i, g) => `<input inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="off" data-i="${i}" placeholder="${ph[i]}"
-    aria-label="${lab[g]} ${i < 2 ? i + 1 : i < 4 ? i - 1 : i - 3}" value="${d[i] === " " ? "" : d[i]}" class="${d[i] === " " ? "" : "filled"}" ${opts.disabled ? "disabled" : ""}>`;
-  return `<div class="dm-row"><div class="dmask" data-dm="${key}" data-noyear="${opts.noYear ? 1 : 0}" aria-disabled="${opts.disabled ? "true" : "false"}">
-    <span class="grp">${cell(0, 0)}${cell(1, 0)}</span><span class="sep">${sep}</span><span class="grp">${cell(2, 1)}${cell(3, 1)}</span><span class="sep">${sep}</span>
-    <span class="grp">${cell(4, 2)}${cell(5, 2)}${cell(6, 2)}${cell(7, 2)}</span></div>
-    ${opts.clear && !opts.disabled ? `<button class="ghost dm-clear" data-dmclear="${key}" title="${lang === "de" ? "Leeren" : "Clear"}">✕</button>` : ""}</div>`;
+  const cell = (i, g) => `<input type="text" inputmode="numeric" autocomplete="off" spellcheck="false" data-i="${i}" placeholder="${ph[i]}"
+    aria-label="${lab[g]}, ${i < 2 ? i + 1 : i < 4 ? i - 1 : i - 3}" value="${d[i] === " " ? "" : d[i]}" class="${d[i] === " " ? "" : "filled"}" ${opts.disabled ? "disabled" : ""}>`;
+  return `<div class="dm-row"><div class="dmask" data-dm="${key}" data-noyear="${opts.noYear ? 1 : 0}" aria-disabled="${opts.disabled ? "true" : "false"}" role="group">
+    <span class="grp dg">${cell(0, 0)}${cell(1, 0)}</span><span class="sep">${sep}</span><span class="grp mg">${cell(2, 1)}${cell(3, 1)}</span><span class="sep">${sep}</span>
+    <span class="grp yg">${cell(4, 2)}${cell(5, 2)}${cell(6, 2)}${cell(7, 2)}</span></div>
+    ${opts.clear && !opts.disabled ? `<button class="ghost dm-clear" data-dmclear="${key}" title="${lang === "de" ? "Leeren" : "Clear"}" aria-label="${lang === "de" ? "Leeren" : "Clear"}">✕</button>` : ""}</div>`;
 }
 /* Ergebnis: ISO "YYYY-MM-DD", "--MM-DD" (ohne Jahr), null (leer), undefined (unvollständig/ungültig) */
 function dmValue(box) {
@@ -379,45 +397,78 @@ function dmValue(box) {
   if (dt.getFullYear() !== +yy || dt.getMonth() !== m - 1 || dt.getDate() !== d || +yy < 1900 || +yy > 2100) return undefined;
   return `${yy}-${mm}-${dd}`;
 }
+/* Verhalten wie ein Code-Feld: jede Ziffer überschreibt das aktuelle Kästchen und springt weiter;
+   der Cursor bleibt sichtbar (blinkt, wenn nicht getippt wird). Gespeichert wird erst, wenn das
+   Datum vollständig ist – oder beim Verlassen (Geburtstag ohne Jahr, Leeren). */
 function bindDateMask(box, onChange) {
   const cells = [...box.querySelectorAll("input")];
   let last = dmValue(box);
-  const emit = () => {
+  const caretEnd = (c) => { try { const n = c.value.length; c.setSelectionRange(n, n); } catch (e) { /* ignorieren */ } };
+  const focusCell = (i) => { const c = cells[Math.max(0, Math.min(7, i))]; c.focus(); caretEnd(c); };
+  const state = () => {
     cells.forEach((c) => c.classList.toggle("filled", !!c.value));
     const val = dmValue(box);
-    const complete = cells.every((c) => c.value) || (box.dataset.noyear === "1" && cells.slice(0, 4).every((c) => c.value) && cells.slice(4).every((c) => !c.value));
-    box.classList.toggle("err", val === undefined && complete);
-    box.classList.toggle("ok", val !== undefined && val !== null);
-    if (val !== undefined && val !== last) { last = val; onChange(val); }
-    if (val === undefined && complete) shake(box);
+    const full = cells.every((c) => c.value);
+    const shortFull = box.dataset.noyear === "1" && cells.slice(0, 4).every((c) => c.value) && cells.slice(4).every((c) => !c.value);
+    return { val, full, shortFull };
   };
-  const fill = (start, digits) => {
+  const emit = (final) => {
+    const { val, full, shortFull } = state();
+    const invalid = val === undefined && (full || (final && (shortFull || cells.some((c) => c.value))));
+    box.classList.toggle("err", invalid);
+    if (invalid && (full || final)) shake(box);
+    if (val === undefined || val === last) return;
+    if (full || final) { last = val; onChange(val); }
+  };
+  const put = (i, digit) => {
+    const c = cells[i];
+    c.value = digit;
+    c.classList.remove("pop"); void c.offsetWidth; c.classList.add("pop");
+    if (i < 7) focusCell(i + 1); else caretEnd(c);
+    emit(false);
+  };
+  const fillFrom = (start, digits) => {
     let i = start;
     for (const ch of digits) { if (i > 7) break; cells[i].value = ch; i++; }
-    cells[Math.min(i, 7)].focus();
-    emit();
+    focusCell(Math.min(i, 7));
+    emit(false);
   };
   cells.forEach((c, i) => {
-    c.addEventListener("focus", () => c.select());
-    c.addEventListener("input", () => {
-      const digits = c.value.replace(/\D/g, "");
-      c.value = "";
-      if (digits) fill(i, digits); else emit();
-    });
+    c.addEventListener("focus", () => setTimeout(() => caretEnd(c), 0));
+    c.addEventListener("mouseup", (ev) => { ev.preventDefault(); caretEnd(c); });
     c.addEventListener("keydown", (ev) => {
+      if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+      if (/^[0-9]$/.test(ev.key)) { ev.preventDefault(); put(i, ev.key); return; }
       if (ev.key === "Backspace") {
         ev.preventDefault();
-        if (c.value) c.value = ""; else if (i > 0) { cells[i - 1].value = ""; cells[i - 1].focus(); }
-        emit();
-      } else if (ev.key === "Delete") { ev.preventDefault(); c.value = ""; emit(); }
-      else if (ev.key === "ArrowLeft" && i > 0) { ev.preventDefault(); cells[i - 1].focus(); }
-      else if (ev.key === "ArrowRight" && i < 7) { ev.preventDefault(); cells[i + 1].focus(); }
-      else if (ev.key === "." || ev.key === "/" || ev.key === "-") {
+        if (c.value) c.value = ""; else if (i > 0) { cells[i - 1].value = ""; focusCell(i - 1); }
+        emit(false);
+      } else if (ev.key === "Delete") { ev.preventDefault(); c.value = ""; emit(false); }
+      else if (ev.key === "ArrowLeft" || (ev.key === "Tab" && ev.shiftKey && i > 0)) { if (i > 0) { ev.preventDefault(); focusCell(i - 1); } }
+      else if (ev.key === "ArrowRight") { if (i < 7) { ev.preventDefault(); focusCell(i + 1); } }
+      else if (ev.key === "Home") { ev.preventDefault(); focusCell(0); }
+      else if (ev.key === "End") { ev.preventDefault(); focusCell(7); }
+      else if (ev.key === "." || ev.key === "/" || ev.key === "-" || ev.key === ",") {
         ev.preventDefault();
-        const next = i < 2 ? 2 : i < 4 ? 4 : i;
-        if (i === 1 && !cells[0].value) { /* nichts */ } else if (next !== i) cells[next].focus();
-      }
+        // Trennzeichen: einstellige Eingabe auffüllen (5. -> 05.) und zum nächsten Block springen
+        if (i === 1 && cells[0].value && !cells[1].value) { cells[1].value = cells[0].value; cells[0].value = "0"; }
+        if (i === 3 && cells[2].value && !cells[3].value) { cells[3].value = cells[2].value; cells[2].value = "0"; }
+        focusCell(i < 2 ? 2 : i < 4 ? 4 : i);
+        emit(false);
+      } else if (ev.key.length === 1) ev.preventDefault();   // keine Buchstaben
     });
+    // Handy-Tastaturen melden oft keine Tasten (key "Unidentified") -> über "input" auswerten
+    c.addEventListener("input", () => {
+      const digits = c.value.replace(/\D/g, "");
+      const prev = c.dataset.prev || "";
+      let fresh = digits;
+      if (prev && digits.length > 1 && digits.startsWith(prev)) fresh = digits.slice(prev.length);
+      else if (prev && digits.length > 1 && digits.endsWith(prev)) fresh = digits.slice(0, digits.length - prev.length);
+      c.value = "";
+      if (!fresh) { emit(false); return; }
+      if (fresh.length === 1) put(i, fresh); else fillFrom(i, fresh);
+    });
+    c.addEventListener("beforeinput", () => { c.dataset.prev = c.value; });
     c.addEventListener("paste", (ev) => {
       const t = (ev.clipboardData || window.clipboardData).getData("text").trim();
       ev.preventDefault();
@@ -427,12 +478,19 @@ function bindDateMask(box, onChange) {
       else if ((m = /^(\d{1,2})[./-](\d{1,2})(?:[./-](\d{4}))?$/.exec(t))) digits = m[1].padStart(2, "0") + m[2].padStart(2, "0") + (m[3] || "");
       else digits = t.replace(/\D/g, "");
       cells.forEach((x) => { x.value = ""; });
-      fill(0, digits.slice(0, 8));
+      fillFrom(0, digits.slice(0, 8));
     });
+  });
+  // Verlassen der ganzen Maske -> Geburtstag ohne Jahr bzw. Leeren übernehmen
+  box.addEventListener("focusout", () => {
+    setTimeout(() => {
+      const active = box.getRootNode().activeElement;
+      if (!active || !box.contains(active)) emit(true);
+    }, 0);
   });
   const row = box.parentElement;
   const clr = row && row.querySelector("[data-dmclear]");
-  if (clr) clr.addEventListener("click", () => { cells.forEach((x) => { x.value = ""; }); emit(); cells[0].focus(); });
+  if (clr) clr.addEventListener("click", () => { cells.forEach((x) => { x.value = ""; }); box.classList.remove("err"); emit(true); focusCell(0); });
 }
 
 const TAB_ICONS = { today: "☀️", insights: "✨", history: "🗓️", family: "🏡", profile: "👤", admin: "🛠️" };
@@ -485,19 +543,29 @@ class MHPanel extends HTMLElement {
       this._rt = setTimeout(() => { if (["today", "family"].includes(this.tab)) this.render(true); }, 700);
     }).catch(() => null);
   }
-  unlock() {
-    return pinDialog(this.shadowRoot, this.lang, { check: async (pin) => {
-      const r = await this.api.call("unlock", { pin }, { session: false });
-      if (r.ok && r.token) this.api.session = r.token;
-      return r;
+  /* Ein Feld für alles: persönliche PIN (Admins kommen damit auch in den Admin-Bereich)
+     oder stattdessen die Admin-PIN (Admin-Rechte nur für diese Sitzung). */
+  async unlock(admin) {
+    const me = this._me || {};
+    const sub = me.admin_pin ? this.t(me.has_pin ? "pin_sub_both" : "pin_sub_admin") : this.t("pin_sub");
+    const r = await pinDialog(this.shadowRoot, this.lang, { title: this.t(admin && !me.has_pin ? "admin_pin_title" : "pin_title"), sub, check: async (pin) => {
+      const res = await this.api.call("unlock", { pin }, { session: false });
+      if (res.ok && res.token) this.api.session = res.token;
+      if (res.ok && res.admin_token) this.api.adminSession = res.admin_token;
+      return res;
     } });
+    const before = !!me.admin_elevated;
+    try { this._me = await this.api.call("me"); } catch (e) { /* bleibt */ }
+    if (this._me.admin_elevated && !before) toast(this.shadowRoot, this.t("admin_in"));
+    return r;
   }
-  adminUnlock() {
-    return pinDialog(this.shadowRoot, this.lang, { title: this.t("admin_pin_title"), sub: "", check: async (pin) => {
-      const r = await this.api.call("admin_unlock", { pin }, { session: false });
-      if (r.ok && r.token) this.api.adminSession = r.token;
-      return r;
-    } });
+  adminUnlock() { return this.unlock(true); }
+  async lockNow() {
+    try { await this.api.call("lock", {}); } catch (e) { /* egal */ }
+    this.api.session = null;
+    this.api.adminSession = null;
+    toast(this.shadowRoot, this.t("locked_now"));
+    this.boot();
   }
   call(type, data, admin) {
     return this.api.call(type, data, { admin, onLocked: () => this.unlock(), onAdminLocked: () => this.adminUnlock() });
@@ -515,7 +583,12 @@ class MHPanel extends HTMLElement {
     const tabs = this.tabs();
     if (!tabs.includes(this.tab)) this.tab = tabs[0];
     const L = (k, v) => this.t(k, v);
-    const head = `<div class="top"><button class="ghost menu" title="Menu">☰</button><div class="h1">${esc(L("app"))}</div><span class="spacer"></span>
+    const me = this._me;
+    const flag = me.admin_elevated ? `<span class="chip amber admin-flag" title="${esc(L("admin_in_hint"))}">🛡️ ${esc(L("admin_in_short"))}</span><button class="ghost kbtn lockb" title="${esc(L("admin_end"))}">${esc(L("admin_end"))}</button>` : "";
+    const showKey = !me.admin_elevated && ((me.has_pin && !this.api.session) || (me.admin_pin && !me.admin_access));
+    const showLock = !me.admin_elevated && me.has_pin && !!this.api.session;
+    const keys = `${showKey ? `<button class="ghost kbtn keyb" title="${esc(L("enter_code"))}" aria-label="${esc(L("enter_code"))}">🔑</button>` : ""}${showLock ? `<button class="ghost kbtn lockb" title="${esc(L("lock_now"))}" aria-label="${esc(L("lock_now"))}">🔒</button>` : ""}`;
+    const head = `<div class="top"><button class="ghost menu" title="Menu">☰</button><div class="h1">${esc(L("app"))}</div>${flag}<span class="spacer"></span>${keys}
       <div class="tabs">${tabs.map((k) => `<button class="tab ${this.tab === k ? "on" : ""}" data-tab="${k}">${esc(L("tab_" + k))}</button>`).join("")}</div></div>`;
     const guide = `<aside class="guide ${this.guideOpen ? "" : "collapsed"}"><div class="row"><b style="color:var(--c-teal)">${this.guideOpen ? esc(L("guide_title")) : "?"}</b><span class="spacer"></span>
       <button class="ghost gt" style="padding:4px 10px">${this.guideOpen ? "‹" : "›"}</button></div>
@@ -554,6 +627,9 @@ class MHPanel extends HTMLElement {
     }));
     R.querySelector(".gt").addEventListener("click", () => { this.guideOpen = !this.guideOpen; lsSet("mh_guide", this.guideOpen); this.render(true); this.shadowRoot.querySelector(".guide").classList.toggle("collapsed", !this.guideOpen); this.bindShellGuide(); });
     R.querySelector(".menu").addEventListener("click", () => this.dispatchEvent(new Event("hass-toggle-menu", { bubbles: true, composed: true })));
+    const kb = R.querySelector(".keyb");
+    if (kb) kb.addEventListener("click", () => this.unlock().then(() => this.render()).catch(() => {}));
+    R.querySelectorAll(".lockb").forEach((b) => b.addEventListener("click", () => this.lockNow()));
   }
   bindShellGuide() {
     const g = this.shadowRoot.querySelector(".guide");
@@ -1020,14 +1096,15 @@ class MHPanel extends HTMLElement {
     const sch = p.schedule;
     const slotHtml = (slot) => {
       const s = sch[slot];
-      return `<h4>${esc(L(slot))}</h4><div class="segs" data-mode="${slot}" style="margin-bottom:10px">${["fixed", "entity", "sleep", "manual"].map((m) => `<button class="seg ${s.mode === m ? "on" : ""}" data-v="${m}" ${(m === "sleep" && !(p.sleep_sources || []).length) || !can("schedule_edit") ? "disabled" : ""}>${esc(L("mode_" + m))}</button>`).join("")}</div>
-        ${s.mode === "fixed" || s.mode === "sleep" ? `<div class="wd-times">${L("weekdays").split(",").map((w) => `<span>${esc(w)}</span>`).join("")}${s.times.map((t, k) => `<input type="time" data-time="${slot}" data-i="${k}" value="${esc(t)}" ${dis("schedule_edit")}>`).join("")}</div>` : ""}
+      return `<h4>${esc(L(slot))}</h4><div class="modes" data-mode="${slot}">${["fixed", "entity", "sleep", "manual"].map((m) => `<button class="chip ${s.mode === m ? "on" : ""}" data-v="${m}" ${(m === "sleep" && !(p.sleep_sources || []).length) || !can("schedule_edit") ? "disabled" : ""}>${esc(L("mode_" + m))}</button>`).join("")}</div>
+        ${s.mode === "fixed" || s.mode === "sleep" ? `<div class="wd-times">${s.times.map((t, k) => `<label class="wd"><span>${esc(L("weekdays").split(",")[k])}</span><input type="time" data-time="${slot}" data-i="${k}" value="${esc(t)}" ${dis("schedule_edit")}></label>`).join("")}</div>` : ""}
         ${s.mode === "entity" ? `<div class="grid2"><div><label class="lbl">${esc(L("t_entity"))}</label><input list="mh-sensors" data-sent="${slot}" value="${esc(s.entity || "")}" ${dis("schedule_edit")}></div><div><label class="lbl">${esc(L("t_offset"))}</label><input type="number" data-soff="${slot}" value="${s.offset_min || 0}" ${dis("schedule_edit")}></div></div>` : ""}`;
     };
     sec(`<h3>⏰ ${esc(L("p_times"))}</h3>${lockedNote("schedule_edit")}${slotHtml("morning")}${slotHtml("evening")}
       ${(p.sleep_sources || []).length ? `<div class="field" style="margin-top:12px"><label class="lbl">${esc(L("t_gap"))}</label><input type="number" min="5" max="90" data-gap value="${sch.sleep_gap_min}" ${dis("schedule_edit")}><div class="hint">${esc(L("t_gap_hint"))}</div></div>` : ""}
       <h4>⏸️ ${esc(L("p_pause"))}</h4>${p.pause ? `<div class="row"><span class="chip amber">${esc(p.pause.until ? L("paused_until", { d: fmtDate(p.pause.until, lang) }) : L("paused"))}</span><span class="spacer"></span><button class="pauseoff" ${dis("pause")}>${esc(L("pause_off"))}</button></div>`
-        : `<div class="row">${dateMaskHtml("pause_until", null, lang, { clear: true, disabled: !can("pause") })}<span class="spacer"></span><button class="pauseon" ${dis("pause")}>${esc(L("pause_on"))}</button></div><div class="hint">${esc(L("pause_until"))}</div>`}`);
+        : `<label class="lbl">${esc(L("pause_until"))}</label>${dateMaskHtml("pause_until", null, lang, { clear: true, disabled: !can("pause") })}
+          <div class="row" style="margin-top:12px;justify-content:flex-end"><button class="pauseon" ${dis("pause")}>${esc(L("pause_on"))}</button></div>`}`);
     // Benachrichtigungen
     const nt = p.notify;
     sec(`<h3>🔔 ${esc(L("p_notify"))}</h3>${lockedNote("schedule_edit")}
@@ -1204,7 +1281,7 @@ class MHPanel extends HTMLElement {
           <div class="hint">${esc(L("s_threshold_hint"))}</div>` : ""}
         ${isNum && others.length ? `<div style="margin-top:10px"><label class="lbl">${esc(L("s_shared"))}</label><div class="choices">${others.map((o) => `<button class="chip ${src.shared_with.includes(o.profile.id) ? "on" : ""}" data-sh="${o.profile.id}">${esc(o.profile.name)}</button>`).join("")}</div></div>` : ""}
         <div class="smap"></div>
-        <h4>${esc(L("s_preview"))}</h4><div class="graph"><div class="center"><div class="spinner"></div></div></div>
+        <h4>${esc(L("s_preview"))}</h4><div class="graph">${src.entity ? `<div class="center"><div class="spinner"></div></div>` : `<div class="hint" style="padding:18px 4px">${esc(L("s_pick_entity"))}</div>`}</div>
         <div class="row" style="margin-top:12px;justify-content:flex-end;gap:8px"><button class="ghost cancel">${esc(L("cancel"))}</button><button class="primary ssave">${esc(L("s_save"))}</button></div></div>`;
       const q = (s) => box.querySelector(s);
       q(".se").addEventListener("change", () => { src.entity = q(".se").value.trim(); const dom = src.entity.split(".")[0];
@@ -1578,7 +1655,7 @@ class MHPanel extends HTMLElement {
       const q = (x) => box.querySelector(x);
       if (q(".wn")) q(".wn").addEventListener("input", () => { data.name = q(".wn").value; });
       const wb = box.querySelector('[data-dm="wbirth"]');
-      if (wb) bindDateMask(wb, (v) => { data.birthdate = v || ""; draw(); });
+      if (wb) bindDateMask(wb, (v) => { data.birthdate = v || ""; });
       if (q(".ws")) q(".ws").addEventListener("change", () => { data.sex = q(".ws").value; });
       box.querySelectorAll("[data-w]").forEach((b) => b.addEventListener("click", () => { data[b.dataset.w] = !data[b.dataset.w]; draw(); }));
       box.querySelectorAll("[data-wm]").forEach((b) => b.addEventListener("click", () => { data.modules[b.dataset.wm] = !b.classList.contains("on"); draw(); }));

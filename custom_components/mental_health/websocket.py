@@ -2,7 +2,9 @@
 
 Rules: every command that returns *content* resolves the person from `connection.user.id`
 (the person can only ever be oneself – no admin bypass) and checks the person's PIN session.
-Admin commands use `require_admin` and the optional admin PIN session.
+Admin commands need admin access: an HA admin (plus the admin PIN session if one is set) or a
+user who entered the admin PIN in this session. Every command accepts the optional `session` and
+`admin_session` fields – the card sends them with every call.
 """
 from __future__ import annotations
 
@@ -60,13 +62,17 @@ def _admin(hass: HomeAssistant, connection: Any, msg: dict) -> Any:
     rt = _rt(hass, connection, msg)
     if rt is None:
         return None
-    if not connection.user.is_admin:
-        connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "Admins only")
-        return None
-    if not rt.admin_session_ok(connection.user.id, msg.get("admin_session")):
-        connection.send_error(msg["id"], "admin_locked", "Admin PIN required")
+    if not rt.admin_access(connection.user, msg.get("admin_session")):
+        if connection.user.is_admin or rt.admin_pin_set():
+            connection.send_error(msg["id"], "admin_locked", "Admin PIN required")
+        else:
+            connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "Admins only")
         return None
     return rt
+
+
+def _viewer(rt: Any, connection: Any, msg: dict) -> Any:
+    return rt.viewer(connection.user, msg.get("admin_session"))
 
 
 def _day(v: Any, default: date) -> date:
@@ -78,6 +84,17 @@ def _day(v: Any, default: date) -> date:
 
 S = vol.Optional("session")
 AS = vol.Optional("admin_session")
+
+
+def _cmd(schema: dict) -> Any:
+    """websocket_command that always accepts the optional session fields."""
+    full = dict(schema)
+    names = {str(getattr(k, "schema", k)) for k in full}
+    if "session" not in names:
+        full[S] = str
+    if "admin_session" not in names:
+        full[AS] = str
+    return websocket_api.websocket_command(full)
 
 
 @callback
@@ -92,15 +109,15 @@ def async_register(hass: HomeAssistant) -> None:
 
 
 # ============================================================ Allgemein
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/me"})
+@_cmd({vol.Required("type"): f"{DOMAIN}/me"})
 @callback
 def ws_me(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     rt = _rt(hass, connection, msg)
     if rt:
-        connection.send_result(msg["id"], rt.me_payload(connection.user))
+        connection.send_result(msg["id"], rt.me_payload(connection.user, msg.get("admin_session")))
 
 
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/subscribe"})
+@_cmd({vol.Required("type"): f"{DOMAIN}/subscribe"})
 @callback
 def ws_subscribe(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     rt = _rt(hass, connection, msg)
@@ -116,7 +133,7 @@ def ws_subscribe(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     connection.send_result(msg_id)
 
 
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/request_setup"})
+@_cmd({vol.Required("type"): f"{DOMAIN}/request_setup"})
 @websocket_api.async_response
 async def ws_request_setup(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     rt = _rt(hass, connection, msg)
@@ -124,32 +141,27 @@ async def ws_request_setup(hass: HomeAssistant, connection: Any, msg: dict) -> N
         connection.send_result(msg["id"], await rt.async_request_setup(connection.user))
 
 
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/unlock", vol.Required("pin"): str})
+@_cmd({vol.Required("type"): f"{DOMAIN}/unlock", vol.Required("pin"): str})
 @websocket_api.async_response
 async def ws_unlock(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     rt = _rt(hass, connection, msg)
     if rt is None:
         return
-    try:
-        connection.send_result(msg["id"], await rt.async_unlock_person(connection.user.id, msg["pin"]))
-    except ValueError as err:
-        connection.send_error(msg["id"], str(err), str(err))
+    connection.send_result(msg["id"], await rt.async_unlock(connection.user, msg["pin"]))
 
 
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/lock", S: str})
+@_cmd({vol.Required("type"): f"{DOMAIN}/lock", S: str})
 @callback
 def ws_lock(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     rt = _rt(hass, connection, msg)
     if rt is None:
         return
-    p = rt.person_for_user(connection.user.id)
-    if p:
-        rt.lock_person(p.pid)
+    rt.lock_user(connection.user.id)
     connection.send_result(msg["id"], {"ok": True})
 
 
 # ============================================================ Persönlich (nur die Person selbst)
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/dashboard", S: str})
+@_cmd({vol.Required("type"): f"{DOMAIN}/dashboard", S: str})
 @callback
 def ws_dashboard(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     rt, p = _own_person(hass, connection, msg)
@@ -157,7 +169,7 @@ def ws_dashboard(hass: HomeAssistant, connection: Any, msg: dict) -> None:
         connection.send_result(msg["id"], rt.dashboard_payload(p))
 
 
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/form", vol.Required("slot"): vol.In(["morning", "evening"]),
+@_cmd({vol.Required("type"): f"{DOMAIN}/form", vol.Required("slot"): vol.In(["morning", "evening"]),
                                   vol.Optional("day"): str, S: str})
 @callback
 def ws_form(hass: HomeAssistant, connection: Any, msg: dict) -> None:
@@ -166,7 +178,7 @@ def ws_form(hass: HomeAssistant, connection: Any, msg: dict) -> None:
         connection.send_result(msg["id"], rt.checkin_form(p, msg["slot"], _day(msg.get("day"), rt.clock().today)))
 
 
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/submit", vol.Required("slot"): vol.In(["morning", "evening"]),
+@_cmd({vol.Required("type"): f"{DOMAIN}/submit", vol.Required("slot"): vol.In(["morning", "evening"]),
                                   vol.Optional("day"): str, vol.Required("data"): dict, S: str})
 @websocket_api.async_response
 async def ws_submit(hass: HomeAssistant, connection: Any, msg: dict) -> None:
@@ -181,7 +193,7 @@ async def ws_submit(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     connection.send_result(msg["id"], res)
 
 
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/draft", vol.Required("slot"): vol.In(["morning", "evening"]),
+@_cmd({vol.Required("type"): f"{DOMAIN}/draft", vol.Required("slot"): vol.In(["morning", "evening"]),
                                   vol.Optional("data"): vol.Any(dict, None), S: str})
 @callback
 def ws_draft(hass: HomeAssistant, connection: Any, msg: dict) -> None:
@@ -201,7 +213,7 @@ def ws_draft(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     connection.send_result(msg["id"], {"ok": True})
 
 
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/day", vol.Required("day"): str, S: str})
+@_cmd({vol.Required("type"): f"{DOMAIN}/day", vol.Required("day"): str, S: str})
 @callback
 def ws_day(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     rt, p = _own_person(hass, connection, msg)
@@ -220,7 +232,7 @@ def ws_day(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     connection.send_result(msg["id"], rec)
 
 
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/delete_entry", vol.Required("day"): str,
+@_cmd({vol.Required("type"): f"{DOMAIN}/delete_entry", vol.Required("day"): str,
                                   vol.Optional("slot"): vol.Any(None, vol.In(["morning", "evening"])), S: str})
 @callback
 def ws_delete_entry(hass: HomeAssistant, connection: Any, msg: dict) -> None:
@@ -234,7 +246,7 @@ def ws_delete_entry(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     connection.send_result(msg["id"], {"ok": True})
 
 
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/search", vol.Optional("query"): str,
+@_cmd({vol.Required("type"): f"{DOMAIN}/search", vol.Optional("query"): str,
                                   vol.Optional("chips"): list, vol.Optional("llm", default=False): bool, S: str})
 @websocket_api.async_response
 async def ws_search(hass: HomeAssistant, connection: Any, msg: dict) -> None:
@@ -266,7 +278,7 @@ async def ws_search(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     connection.send_result(msg["id"], {"results": out, "chips": chips_out, "llm": used_llm})
 
 
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/insights", S: str})
+@_cmd({vol.Required("type"): f"{DOMAIN}/insights", S: str})
 @websocket_api.async_response
 async def ws_insights(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     rt, p = _own_person(hass, connection, msg)
@@ -294,15 +306,15 @@ async def ws_insights(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     connection.send_result(msg["id"], {**reports, "derived": derived})
 
 
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/family"})
+@_cmd({vol.Required("type"): f"{DOMAIN}/family"})
 @callback
 def ws_family(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     rt = _rt(hass, connection, msg)
     if rt:
-        connection.send_result(msg["id"], rt.family_payload(rt.viewer(connection.user)))
+        connection.send_result(msg["id"], rt.family_payload(_viewer(rt, connection, msg)))
 
 
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/pause", vol.Required("on"): bool,
+@_cmd({vol.Required("type"): f"{DOMAIN}/pause", vol.Required("on"): bool,
                                   vol.Optional("until"): vol.Any(str, None), vol.Optional("pid"): str, AS: str, S: str})
 @websocket_api.async_response
 async def ws_pause(hass: HomeAssistant, connection: Any, msg: dict) -> None:
@@ -313,8 +325,8 @@ async def ws_pause(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     if p is None:
         connection.send_error(msg["id"], ERR_NOT_SET_UP, "Not set up")
         return
-    v = rt.viewer(connection.user)
-    if not PM.allowed(v, PM.PAUSE, p.rights) or (v.user_id != p.user_id and not rt.admin_session_ok(v.user_id, msg.get("admin_session"))):
+    v = _viewer(rt, connection, msg)
+    if not PM.allowed(v, PM.PAUSE, p.rights) or (v.user_id != p.user_id and not rt.admin_access(connection.user, msg.get("admin_session"))):
         connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "Not allowed")
         return
     until = msg.get("until")
@@ -342,13 +354,13 @@ def _profile_view(rt: Any, v: PM.Viewer, p: Any) -> dict:
             "platforms": {t["id"]: rt._platform_of(t) for t in p.profile["targets"]}}
 
 
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/profile", vol.Optional("pid"): str, AS: str})
+@_cmd({vol.Required("type"): f"{DOMAIN}/profile", vol.Optional("pid"): str, AS: str})
 @callback
 def ws_profile(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     rt = _rt(hass, connection, msg)
     if rt is None:
         return
-    v = rt.viewer(connection.user)
+    v = _viewer(rt, connection, msg)
     p = rt.persons.get(msg["pid"]) if msg.get("pid") else rt.person_for_user(v.user_id)
     if p is None:
         connection.send_error(msg["id"], ERR_NOT_SET_UP, "Not set up")
@@ -356,26 +368,26 @@ def ws_profile(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     if not PM.allowed(v, PM.PROFILE_VIEW, p.rights):
         connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "Not allowed")
         return
-    if v.user_id != p.user_id and not rt.admin_session_ok(v.user_id, msg.get("admin_session")):
+    if v.user_id != p.user_id and not rt.admin_access(connection.user, msg.get("admin_session")):
         connection.send_error(msg["id"], "admin_locked", "Admin PIN required")
         return
     connection.send_result(msg["id"], _profile_view(rt, v, p))
 
 
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/profile_update", vol.Optional("pid"): str,
+@_cmd({vol.Required("type"): f"{DOMAIN}/profile_update", vol.Optional("pid"): str,
                                   vol.Required("changes"): dict, AS: str, S: str})
 @callback
 def ws_profile_update(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     rt = _rt(hass, connection, msg)
     if rt is None:
         return
-    v = rt.viewer(connection.user)
+    v = _viewer(rt, connection, msg)
     p = rt.persons.get(msg["pid"]) if msg.get("pid") else rt.person_for_user(v.user_id)
     if p is None:
         connection.send_error(msg["id"], ERR_NOT_SET_UP, "Not set up")
         return
     if v.user_id != p.user_id:
-        if not v.is_admin or not rt.admin_session_ok(v.user_id, msg.get("admin_session")):
+        if not v.is_admin or not rt.admin_access(connection.user, msg.get("admin_session")):
             connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "Not allowed")
             return
     elif not rt.person_session_ok(p, v.user_id, msg.get("session")):
@@ -388,7 +400,7 @@ def ws_profile_update(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     connection.send_result(msg["id"], {"refused": refused, **_profile_view(rt, v, p)})
 
 
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/set_pin", vol.Optional("old"): vol.Any(str, None),
+@_cmd({vol.Required("type"): f"{DOMAIN}/set_pin", vol.Optional("old"): vol.Any(str, None),
                                   vol.Optional("new"): vol.Any(str, None)})
 @websocket_api.async_response
 async def ws_set_pin(hass: HomeAssistant, connection: Any, msg: dict) -> None:
@@ -401,29 +413,29 @@ async def ws_set_pin(hass: HomeAssistant, connection: Any, msg: dict) -> None:
         connection.send_error(msg["id"], str(err), str(err))
 
 
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/test_notification", vol.Optional("pid"): str, AS: str})
+@_cmd({vol.Required("type"): f"{DOMAIN}/test_notification", vol.Optional("pid"): str, AS: str})
 @websocket_api.async_response
 async def ws_test_notification(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     rt = _rt(hass, connection, msg)
     if rt is None:
         return
-    v = rt.viewer(connection.user)
+    v = _viewer(rt, connection, msg)
     p = rt.persons.get(msg["pid"]) if msg.get("pid") else rt.person_for_user(v.user_id)
-    if p is None or not (v.user_id == p.user_id or (v.is_admin and rt.admin_session_ok(v.user_id, msg.get("admin_session")))):
+    if p is None or not (v.user_id == p.user_id or (v.is_admin and rt.admin_access(connection.user, msg.get("admin_session")))):
         connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "Not allowed")
         return
     n = await rt.send_test(p)
     connection.send_result(msg["id"], {"sent": n, "targets": len(p.profile["targets"])})
 
 
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/sleep_model", vol.Optional("pid"): str, AS: str, S: str})
+@_cmd({vol.Required("type"): f"{DOMAIN}/sleep_model", vol.Optional("pid"): str, AS: str, S: str})
 @callback
 def ws_sleep_model(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     """Model view: the person sees everything incl. recent nights; an admin (setup) sees no nights."""
     rt = _rt(hass, connection, msg)
     if rt is None:
         return
-    v = rt.viewer(connection.user)
+    v = _viewer(rt, connection, msg)
     p = rt.persons.get(msg["pid"]) if msg.get("pid") else rt.person_for_user(v.user_id)
     if p is None:
         connection.send_error(msg["id"], ERR_NOT_SET_UP, "Not set up")
@@ -432,7 +444,7 @@ def ws_sleep_model(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     if own and not rt.person_session_ok(p, v.user_id, msg.get("session")):
         connection.send_error(msg["id"], ERR_LOCKED, "Locked")
         return
-    if not own and not (v.is_admin and rt.admin_session_ok(v.user_id, msg.get("admin_session"))):
+    if not own and not (v.is_admin and rt.admin_access(connection.user, msg.get("admin_session"))):
         connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "Not allowed")
         return
     view = p.sleep.view()
@@ -444,13 +456,13 @@ def ws_sleep_model(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     connection.send_result(msg["id"], view)
 
 
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/sleep_reset", vol.Optional("pid"): str, AS: str, S: str})
+@_cmd({vol.Required("type"): f"{DOMAIN}/sleep_reset", vol.Optional("pid"): str, AS: str, S: str})
 @callback
 def ws_sleep_reset(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     rt = _rt(hass, connection, msg)
     if rt is None:
         return
-    v = rt.viewer(connection.user)
+    v = _viewer(rt, connection, msg)
     p = rt.persons.get(msg["pid"]) if msg.get("pid") else rt.person_for_user(v.user_id)
     if p is None or not PM.allowed(v, PM.PROFILE_EDIT, p.rights):
         connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "Not allowed")
@@ -461,7 +473,7 @@ def ws_sleep_reset(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     connection.send_result(msg["id"], {"ok": True})
 
 
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/source_preview", vol.Optional("pid"): str,
+@_cmd({vol.Required("type"): f"{DOMAIN}/source_preview", vol.Optional("pid"): str,
                                   vol.Required("source"): dict, vol.Optional("hours", default=48): vol.All(int, vol.Range(min=6, max=168)),
                                   AS: str, S: str})
 @websocket_api.async_response
@@ -469,7 +481,7 @@ async def ws_source_preview(hass: HomeAssistant, connection: Any, msg: dict) -> 
     rt = _rt(hass, connection, msg)
     if rt is None:
         return
-    v = rt.viewer(connection.user)
+    v = _viewer(rt, connection, msg)
     p = rt.persons.get(msg["pid"]) if msg.get("pid") else rt.person_for_user(v.user_id)
     if p is None or not PM.allowed(v, PM.PROFILE_EDIT, p.rights):
         connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "Not allowed")
@@ -477,7 +489,7 @@ async def ws_source_preview(hass: HomeAssistant, connection: Any, msg: dict) -> 
     connection.send_result(msg["id"], await rt.async_source_preview(p.pid, msg["source"], msg["hours"]))
 
 
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/export", vol.Optional("format", default="json"): vol.In(["json", "md"]), S: str})
+@_cmd({vol.Required("type"): f"{DOMAIN}/export", vol.Optional("format", default="json"): vol.In(["json", "md"]), S: str})
 @websocket_api.async_response
 async def ws_export(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     """Personal export – only the person's own data."""
@@ -517,7 +529,7 @@ async def ws_export(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     connection.send_result(msg["id"], {"format": msg["format"], "content": text})
 
 
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/import", vol.Required("content"): str, S: str})
+@_cmd({vol.Required("type"): f"{DOMAIN}/import", vol.Required("content"): str, S: str})
 @websocket_api.async_response
 async def ws_import(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     """Own import (JSON export of this integration). Existing days are kept, new ones added."""
@@ -569,7 +581,7 @@ async def ws_import(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     connection.send_result(msg["id"], {"added": added})
 
 
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/llm", vol.Required("action"): vol.In(["summary", "status"]),
+@_cmd({vol.Required("type"): f"{DOMAIN}/llm", vol.Required("action"): vol.In(["summary", "status"]),
                                   vol.Optional("days", default=7): int, S: str})
 @websocket_api.async_response
 async def ws_llm(hass: HomeAssistant, connection: Any, msg: dict) -> None:
@@ -580,7 +592,7 @@ async def ws_llm(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     llm = Llm(rt)
     if msg["action"] == "status":
         connection.send_result(msg["id"], {"enabled": bool(rt.settings["llm"]["enabled"]), "consent": p.mod("llm"),
-                                           "allowed": PM.allowed(rt.viewer(connection.user), PM.LLM_CONSENT, p.rights),
+                                           "allowed": PM.allowed(_viewer(rt, connection, msg), PM.LLM_CONSENT, p.rights),
                                            "backend": rt.settings["llm"].get("entity") or rt.settings["llm"].get("agent")})
         return
     others = [o.name for o in rt.persons.values() if o.pid != p.pid] + [o.name.split(" ")[0] for o in rt.persons.values() if o.pid != p.pid]
@@ -596,8 +608,7 @@ async def ws_llm(hass: HomeAssistant, connection: Any, msg: dict) -> None:
 
 
 # ============================================================ Admin
-@websocket_api.require_admin
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/admin", AS: str})
+@_cmd({vol.Required("type"): f"{DOMAIN}/admin", AS: str})
 @callback
 def ws_admin(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     rt = _admin(hass, connection, msg)
@@ -606,17 +617,15 @@ def ws_admin(hass: HomeAssistant, connection: Any, msg: dict) -> None:
         connection.send_result(msg["id"], {**rt.admin_payload(), "llm_caps": Llm(rt).capabilities()})
 
 
-@websocket_api.require_admin
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/admin_unlock", vol.Required("pin"): str})
+@_cmd({vol.Required("type"): f"{DOMAIN}/admin_unlock", vol.Required("pin"): str})
 @websocket_api.async_response
 async def ws_admin_unlock(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     rt = _rt(hass, connection, msg)
     if rt:
-        connection.send_result(msg["id"], await rt.async_admin_unlock(connection.user.id, msg["pin"]))
+        connection.send_result(msg["id"], await rt.async_unlock(connection.user, msg["pin"]))
 
 
-@websocket_api.require_admin
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/admin_create_person", vol.Required("person_entity"): str,
+@_cmd({vol.Required("type"): f"{DOMAIN}/admin_create_person", vol.Required("person_entity"): str,
                                   vol.Optional("data"): dict, AS: str})
 @websocket_api.async_response
 async def ws_admin_create_person(hass: HomeAssistant, connection: Any, msg: dict) -> None:
@@ -631,8 +640,7 @@ async def ws_admin_create_person(hass: HomeAssistant, connection: Any, msg: dict
     connection.send_result(msg["id"], {"pid": p.pid})
 
 
-@websocket_api.require_admin
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/admin_delete_person", vol.Required("pid"): str, AS: str})
+@_cmd({vol.Required("type"): f"{DOMAIN}/admin_delete_person", vol.Required("pid"): str, AS: str})
 @websocket_api.async_response
 async def ws_admin_delete_person(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     rt = _admin(hass, connection, msg)
@@ -646,8 +654,7 @@ async def ws_admin_delete_person(hass: HomeAssistant, connection: Any, msg: dict
     connection.send_result(msg["id"], {"ok": True})
 
 
-@websocket_api.require_admin
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/admin_settings", vol.Required("changes"): dict, AS: str})
+@_cmd({vol.Required("type"): f"{DOMAIN}/admin_settings", vol.Required("changes"): dict, AS: str})
 @callback
 def ws_admin_settings(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     rt = _admin(hass, connection, msg)
@@ -670,8 +677,7 @@ def ws_admin_settings(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     connection.send_result(msg["id"], rt.admin_payload())
 
 
-@websocket_api.require_admin
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/admin_set_pin", vol.Optional("pin"): vol.Any(str, None), AS: str})
+@_cmd({vol.Required("type"): f"{DOMAIN}/admin_set_pin", vol.Optional("pin"): vol.Any(str, None), AS: str})
 @websocket_api.async_response
 async def ws_admin_set_pin(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     rt = _admin(hass, connection, msg)
@@ -685,8 +691,7 @@ async def ws_admin_set_pin(hass: HomeAssistant, connection: Any, msg: dict) -> N
     connection.send_result(msg["id"], {"ok": True, "admin_pin": rt.admin_pin_set()})
 
 
-@websocket_api.require_admin
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/admin_reset_pin", vol.Required("pid"): str, AS: str})
+@_cmd({vol.Required("type"): f"{DOMAIN}/admin_reset_pin", vol.Required("pid"): str, AS: str})
 @websocket_api.async_response
 async def ws_admin_reset_pin(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     rt = _admin(hass, connection, msg)
@@ -697,8 +702,7 @@ async def ws_admin_reset_pin(hass: HomeAssistant, connection: Any, msg: dict) ->
     connection.send_result(msg["id"], await rt.async_reset_pin(msg["pid"]))
 
 
-@websocket_api.require_admin
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/admin_dismiss_request", vol.Required("user_id"): str, AS: str})
+@_cmd({vol.Required("type"): f"{DOMAIN}/admin_dismiss_request", vol.Required("user_id"): str, AS: str})
 @callback
 def ws_admin_dismiss_request(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     rt = _admin(hass, connection, msg)
@@ -709,8 +713,7 @@ def ws_admin_dismiss_request(hass: HomeAssistant, connection: Any, msg: dict) ->
     connection.send_result(msg["id"], {"ok": True})
 
 
-@websocket_api.require_admin
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/admin_llm", vol.Required("changes"): dict, AS: str})
+@_cmd({vol.Required("type"): f"{DOMAIN}/admin_llm", vol.Required("changes"): dict, AS: str})
 @callback
 def ws_admin_llm(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     rt = _admin(hass, connection, msg)
@@ -735,8 +738,7 @@ def ws_admin_llm(hass: HomeAssistant, connection: Any, msg: dict) -> None:
 
 
 # ============================================================ Backup (Admin)
-@websocket_api.require_admin
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/backup_password", vol.Optional("password"): vol.Any(str, None), AS: str})
+@_cmd({vol.Required("type"): f"{DOMAIN}/backup_password", vol.Optional("password"): vol.Any(str, None), AS: str})
 @callback
 def ws_backup_password(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     rt = _admin(hass, connection, msg)
@@ -750,8 +752,7 @@ def ws_backup_password(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     connection.send_result(msg["id"], {"ok": True})
 
 
-@websocket_api.require_admin
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/backup_create", vol.Optional("password"): str, AS: str})
+@_cmd({vol.Required("type"): f"{DOMAIN}/backup_create", vol.Optional("password"): str, AS: str})
 @websocket_api.async_response
 async def ws_backup_create(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     rt = _admin(hass, connection, msg)
@@ -773,8 +774,7 @@ async def _blob(hass: HomeAssistant, rt: Any, msg: dict) -> bytes:
     raise archive.BackupError("no_file")
 
 
-@websocket_api.require_admin
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/backup_preview", vol.Optional("name"): str,
+@_cmd({vol.Required("type"): f"{DOMAIN}/backup_preview", vol.Optional("name"): str,
                                   vol.Optional("data"): str, vol.Required("password"): str, AS: str})
 @websocket_api.async_response
 async def ws_backup_preview(hass: HomeAssistant, connection: Any, msg: dict) -> None:
@@ -790,8 +790,7 @@ async def ws_backup_preview(hass: HomeAssistant, connection: Any, msg: dict) -> 
     connection.send_result(msg["id"], res)
 
 
-@websocket_api.require_admin
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/backup_restore", vol.Optional("name"): str,
+@_cmd({vol.Required("type"): f"{DOMAIN}/backup_restore", vol.Optional("name"): str,
                                   vol.Optional("data"): str, vol.Required("password"): str,
                                   vol.Optional("scope", default="all"): vol.In(["all", "config", "person"]),
                                   vol.Optional("pid"): str, AS: str})
@@ -809,8 +808,7 @@ async def ws_backup_restore(hass: HomeAssistant, connection: Any, msg: dict) -> 
     connection.send_result(msg["id"], res)
 
 
-@websocket_api.require_admin
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/backup_download", vol.Required("name"): str, AS: str})
+@_cmd({vol.Required("type"): f"{DOMAIN}/backup_download", vol.Required("name"): str, AS: str})
 @websocket_api.async_response
 async def ws_backup_download(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     rt = _admin(hass, connection, msg)
@@ -825,8 +823,7 @@ async def ws_backup_download(hass: HomeAssistant, connection: Any, msg: dict) ->
     connection.send_result(msg["id"], {"name": msg["name"], "data": base64.b64encode(blob).decode("ascii")})
 
 
-@websocket_api.require_admin
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/backup_delete", vol.Required("name"): str, AS: str})
+@_cmd({vol.Required("type"): f"{DOMAIN}/backup_delete", vol.Required("name"): str, AS: str})
 @websocket_api.async_response
 async def ws_backup_delete(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     rt = _admin(hass, connection, msg)

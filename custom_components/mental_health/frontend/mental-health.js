@@ -6,7 +6,7 @@
 const SELF_URL = import.meta.url;
 (() => {
 if (window.__MH) return;
-const VERSION = "1.0.1";
+const VERSION = "1.0.2";
 const DOMAIN = "mental_health";
 const PANEL = "/mental-health";
 
@@ -293,8 +293,17 @@ button.danger{ color:var(--c-red); }
 .pin-dots i.on{ background:var(--c-teal); transform:scale(1.15); }
 .pin-pad{ display:grid; grid-template-columns:repeat(3,64px); gap:12px; justify-content:center; }
 .pin-pad button{ height:64px; font-size:22px; padding:0; border-radius:50%; }
-input, textarea, select{ font-family:inherit; font-size:15px; color:var(--c-text); background:var(--c-raise); border:1.5px solid transparent; border-radius:14px; padding:11px 14px; width:100%; outline:none; transition:border-color .2s var(--ease), background .2s; }
-input:focus, textarea:focus, select:focus{ border-color:var(--c-teal); background:var(--c-raise2); }
+input, textarea, select{ font-family:inherit; font-size:15px; color:var(--c-text); background:var(--c-raise); border:1.5px solid rgba(255,255,255,.09);
+  border-color:color-mix(in srgb, var(--c-line) 75%, transparent); border-radius:14px; padding:11px 14px; width:100%; outline:none; caret-color:var(--c-teal);
+  transition:border-color .2s var(--ease), background .2s, box-shadow .2s; }
+@media (hover:hover){ input:not(:disabled):hover, textarea:not(:disabled):hover, select:not(:disabled):hover{ border-color:color-mix(in srgb, var(--c-teal) 45%, var(--c-line)); } }
+input:focus, textarea:focus, select:focus{ border-color:var(--c-teal); background:var(--c-raise2); box-shadow:0 0 0 3px var(--c-active); }
+input:disabled, textarea:disabled, select:disabled{ opacity:.6; }
+.tile input, .tile textarea, .tile select{ background:var(--c-surface); }
+.tile input:focus, .tile textarea:focus, .tile select:focus{ background:var(--c-bg); }
+select{ appearance:none; -webkit-appearance:none; padding-right:38px; cursor:pointer;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23868894' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 14px center; }
 textarea{ min-height:96px; resize:vertical; line-height:1.5; }
 label.lbl{ font-size:13px; color:var(--c-muted); display:block; margin:0 0 6px 2px; }
 .field{ margin:0 0 18px; }
@@ -362,8 +371,9 @@ class Api {
   set adminSession(v) { ssSet(SESS_KEY(this.uid, true), v); }
   async call(type, data, opts = {}) {
     const msg = Object.assign({ type: `${DOMAIN}/${type}` }, data || {});
+    // Beide Sitzungen immer mitsenden – der Server nimmt sie bei jedem Befehl an
     if (opts.session !== false && this.session) msg.session = this.session;
-    if (opts.admin && this.adminSession) msg.admin_session = this.adminSession;
+    if (opts.session !== false && this.adminSession) msg.admin_session = this.adminSession;
     try {
       return await this.hass.callWS(msg);
     } catch (e) {
@@ -562,6 +572,7 @@ class MHCheckin extends HTMLElement {
     return pinDialog(this.shadowRoot, this.lang, { check: async (pin) => {
       const r = await this.api.call("unlock", { pin }, { session: false });
       if (r.ok && r.token) this.api.session = r.token;
+      if (r.ok && r.admin_token) this.api.adminSession = r.admin_token;
       return r;
     } });
   }
@@ -892,6 +903,7 @@ class MHBase extends HTMLElement {
     return pinDialog(this.shadowRoot, this.lang, { check: async (pin) => {
       const r = await this.api.call("unlock", { pin }, { session: false });
       if (r.ok && r.token) this.api.session = r.token;
+      if (r.ok && r.admin_token) this.api.adminSession = r.admin_token;
       return r;
     } });
   }

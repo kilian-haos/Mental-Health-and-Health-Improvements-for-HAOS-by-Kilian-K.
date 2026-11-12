@@ -93,7 +93,7 @@ Mehr: [docs/privacy.md](docs/privacy.md) (Englisch).
 | Persönliche PIN | – (nur zurücksetzen) | ✅ | ✅ | ✅ |
 | Einträge, Journal, Insights, Zyklus-Details | **nur eigene** | nur eigene | nur eigene | nur eigene |
 
-Was jemand nicht ändern darf, ist ausgegraut mit kurzem Grund – nie versteckt. Eine optionale **Admin-PIN** (4-stellig, standardmäßig aus) schützt den Admin-Bereich; sie ist völlig getrennt von den Personen-PINs.
+Was jemand nicht ändern darf, ist ausgegraut mit kurzem Grund – nie versteckt. Eine optionale **Admin-PIN** (4-stellig, standardmäßig aus) schützt den Admin-Bereich; sie ist völlig getrennt von den Personen-PINs. Es gibt **ein PIN-Feld** (🔑): Die persönliche PIN eines Admins öffnet auch den Admin-Bereich; wird *stattdessen* die Admin-PIN eingegeben, gibt es Admin-Rechte nur für die aktuelle Sitzung – auch für Nicht-Admins, erkennbar am Hinweis „Als Admin drin“. Die Admin-PIN entschlüsselt nie die Texte einer Person.
 
 ## Check-ins
 

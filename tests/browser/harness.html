@@ -47,7 +47,7 @@ const night = (dayIso, h0 = 23.4, h1 = 6.9) => {
 const nights = [];
 for (let i = 0; i < 14; i++) { const d = iso(+today - i * DAY); nights.push(Object.assign({ day: d }, night(d, 23 + rnd(), 6.5 + rnd()))); }
 const me = USER === "new" ? { version: "1.0.0", is_admin: false, admin_pin: false, setup: false, request: null, persons: 3, llm: { enabled: false }, settings_public: {} }
-  : { version: "1.0.0", is_admin: USER === "admin", admin_pin: false, setup: true, pid: "p1", name: child ? "Lena K" : "Kilian K", child, has_pin: false, persons: 3,
+  : { version: "1.0.0", is_admin: USER === "admin", admin_pin: Q.get("apin") === "1", admin_access: USER === "admin", admin_elevated: false, setup: true, pid: "p1", name: child ? "Lena K" : "Kilian K", child, has_pin: false, persons: 3,
     llm: { enabled: !child }, settings_public: { evening_from: "14:00" },
     modules: { mood: true, energy: true, health: true, sleep_quality: true, sleep_tracking: true, good_bad: true, goals: true, journal: true, weight: !child, training: true, cycle: child ? false : true, birthday: true, suggestions: true, llm: !child },
     rights: Object.fromEntries(["manage_persons", "profile_view", "profile_edit", "weight_view", "weight_edit", "target_weight_edit", "modules_edit", "schedule_edit", "pause", "own_pin", "reset_pin", "content", "checkin", "llm_consent", "admin_area", "backup"]
@@ -162,7 +162,11 @@ const handlers = {
     notify_services: ["notify.mobile_app_s25", "notify.mobile_app_ipad"], platforms: { t1: "android" } }),
   profile_update: (m) => { Object.assign(profile, m.changes); return Object.assign(handlers.profile(), { refused: {} }); },
   set_pin: () => ({ ok: true, has_pin: true, token: "tok" }),
-  unlock: () => ({ ok: true, token: "tok" }),
+  unlock: (m) => {
+    if (m.pin === "9999") { me.is_admin = true; me.admin_elevated = true; me.admin_access = true; return { ok: true, admin_token: "atok", elevated: true }; }
+    return m.pin === "1234" ? { ok: true, token: "tok" } : { ok: false, left: 2 };
+  },
+  lock: () => ({ ok: true }),
   test_notification: () => ({ sent: 1, targets: 1 }),
   sleep_model: () => sleepModel,
   sleep_reset: () => ({ ok: true }),

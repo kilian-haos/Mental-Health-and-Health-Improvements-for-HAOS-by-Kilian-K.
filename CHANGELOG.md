@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.2 – 2026-11-12
+
+- **Fixed: Family, Profile and Admin could not be opened after entering your personal PIN.** The panel sends the PIN session with every request, but several commands did not accept it. Every command now accepts the session fields (covered by a new test).
+- **One PIN field for everything**: your personal PIN unlocks your entries – and, if you are a Home Assistant admin, also the admin area (no second PIN). Entering the **admin PIN instead** gives admin rights for the current session only, also to non-admin users, with an "Admin" hint and an "End admin" button. The admin PIN never decrypts anyone's texts. A 🔑 button opens the field, 🔒 locks immediately.
+- **Date mask reworked**: every digit overwrites its box and jumps on – also into the year and also when the boxes are already filled; the cursor stays visible and blinks; a birthday without a year is only saved when you leave the field (no half-finished dates); typing `5.` becomes `05.`; works with phone keyboards.
+- **Desktop layout**: wider columns, health score components no longer overflow, check-in times as tiles, trigger modes as chips, the date masks scale with the card, "pause until" on its own row.
+- **Input fields always visible** (subtle frame, own background inside tiles, custom select arrow), teal cursor everywhere; the sleep source wizard shows a hint instead of an endless spinner before an entity is chosen.
+
 ## 1.0.1 – 2026-11-11
 
 - **Delete backups** in the admin area: a delete button per backup file with a confirmation (admins only, admin PIN if set). Automatic backups are still pruned to the configured number; manual backups, uploads and safety points are only removed by you.

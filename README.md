@@ -93,7 +93,7 @@ Copy `custom_components/mental_health` into `<config>/custom_components/` and re
 | Personal PIN | – (reset only) | ✅ | ✅ | ✅ |
 | Entries, journal, insights, cycle details | **only own** | only own | only own | only own |
 
-What someone may not change is shown greyed out with a short reason – never hidden. An optional **admin PIN** (4 digits, off by default) protects the admin area; it is completely separate from personal PINs.
+What someone may not change is shown greyed out with a short reason – never hidden. An optional **admin PIN** (4 digits, off by default) protects the admin area; it is completely separate from personal PINs. There is **one PIN field** (🔑): an admin's personal PIN also opens the admin area; entering the admin PIN *instead* gives admin rights for the current session only – also to non-admin users, shown with an "Admin" hint. The admin PIN never decrypts anyone's texts.
 
 ## Check-ins
 

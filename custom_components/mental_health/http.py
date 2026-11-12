@@ -29,9 +29,7 @@ class BackupDownloadView(HomeAssistantView):
         hass: HomeAssistant = request.app["hass"]
         user = request["hass_user"]
         rt = _rt(hass)
-        if rt is None or not user.is_admin:
-            return web.Response(status=403)
-        if rt.admin_pin_set() and not rt.admin_session_ok(user.id, request.query.get("admin_session")):
+        if rt is None or not rt.admin_access(user, request.query.get("admin_session")):
             return web.Response(status=403)
         try:
             blob = await hass.async_add_executor_job(archive.read_file, rt, name)
@@ -50,9 +48,7 @@ class BackupUploadView(HomeAssistantView):
         hass: HomeAssistant = request.app["hass"]
         user = request["hass_user"]
         rt = _rt(hass)
-        if rt is None or not user.is_admin:
-            return web.Response(status=403)
-        if rt.admin_pin_set() and not rt.admin_session_ok(user.id, request.query.get("admin_session")):
+        if rt is None or not rt.admin_access(user, request.query.get("admin_session")):
             return web.Response(status=403)
         body = await request.content.read(MAX_UPLOAD + 1)
         if len(body) > MAX_UPLOAD:

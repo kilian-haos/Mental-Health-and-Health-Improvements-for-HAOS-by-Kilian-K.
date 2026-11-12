@@ -166,12 +166,24 @@ const click = (page, sel, i = 0) => page.evaluate(`(() => { const l = (${deep})(
     await page.keyboard.press("Backspace"); await page.keyboard.press("Backspace"); await page.keyboard.press("Backspace"); await page.keyboard.press("Backspace");
     await page.waitForTimeout(250);
     upd = await page.evaluate(() => window.__calls.filter((c) => c.type === "mental_health/profile_update").map((c) => c.changes.birthdate));
-    check(`${lang} profile: Geburtstag ohne Jahr`, upd.includes("--02-31") === false && (await count(page, '[data-dm="birthdate"].err')) === 1);
+    check(`${lang} profile: ungültiger Tag ohne Jahr nie gespeichert`, upd.includes("--02-31") === false);
     await page.evaluate(`(() => { const c = (${deep})('[data-dm="birthdate"] input'); c.forEach((x) => { x.value = ""; }); c[0].focus(); })()`);
     await page.keyboard.type("2412");
     await page.waitForTimeout(250);
+    const focusedIdx = await page.evaluate(`(() => { const box = (${deep})('[data-dm="birthdate"]')[0]; const a = box.getRootNode().activeElement; return a && a.dataset ? a.dataset.i : null; })()`);
+    check(`${lang} profile: springt von Monat ins Jahr`, focusedIdx === "4", String(focusedIdx));
     upd = await page.evaluate(() => window.__calls.filter((c) => c.type === "mental_health/profile_update").map((c) => c.changes.birthdate));
-    check(`${lang} profile: ohne Jahr gespeichert`, upd.includes("--12-24"), JSON.stringify(upd));
+    check(`${lang} profile: ohne Jahr nicht vorschnell gespeichert`, !upd.includes("--12-24"));
+    await page.evaluate(`(() => { const b = (${deep})('[data-dm="birthdate"] input')[4]; b.blur(); (${deep})('h3')[0].click(); })()`);
+    await page.waitForTimeout(300);
+    upd = await page.evaluate(() => window.__calls.filter((c) => c.type === "mental_health/profile_update").map((c) => c.changes.birthdate));
+    check(`${lang} profile: ohne Jahr beim Verlassen gespeichert`, upd.includes("--12-24"), JSON.stringify(upd));
+    // befüllte Felder überschreiben (Jahr ändern)
+    await page.evaluate(`(() => { const c = (${deep})('[data-dm="birthdate"] input'); "20042016".split("").forEach((d, i) => { c[i].value = d; }); c[4].focus(); })()`);
+    await page.keyboard.type("2017");
+    await page.waitForTimeout(300);
+    upd = await page.evaluate(() => window.__calls.filter((c) => c.type === "mental_health/profile_update").map((c) => c.changes.birthdate));
+    check(`${lang} profile: befülltes Jahr überschrieben`, upd.includes("2017-04-20"), JSON.stringify(upd));
     // Einfügen eines ganzen Datums
     await page.evaluate(`(() => { const c = (${deep})('[data-dm="birthdate"] input')[0]; const dt = new DataTransfer(); dt.setData("text", "17.05.1990"); c.dispatchEvent(new ClipboardEvent("paste", { clipboardData: dt, bubbles: true, cancelable: true })); })()`);
     await page.waitForTimeout(250);
@@ -228,6 +240,20 @@ const click = (page, sel, i = 0) => page.evaluate(`(() => { const l = (${deep})(
     await page.waitForTimeout(900);
     check(`${lang} admin: Person bearbeiten`, (await count(page, ".delp")) === 1);
     check(`${lang} admin: keine JS-Fehler`, errs.length === 0, errs.join(" ; "));
+    await ctx.close();
+
+    // Admin-PIN statt persönlicher PIN: Admin für diese Sitzung, mit Hinweis
+    ({ page, ctx, errs } = await open(browser, `lang=${lang}&user=adult&tab=today&apin=1`, DESK));
+    check(`${lang} adminpin: Schlüssel-Knopf`, (await count(page, ".keyb")) === 1);
+    check(`${lang} adminpin: kein Admin-Tab vorher`, (await count(page, '.tab[data-tab="admin"]')) === 0);
+    await click(page, ".keyb");
+    await page.waitForTimeout(300);
+    for (const d of "9999") { await click(page, `.pin-pad button[data-k="${d}"]`); await page.waitForTimeout(40); }
+    await page.waitForTimeout(900);
+    check(`${lang} adminpin: Admin-Tab danach`, (await count(page, '.tab[data-tab="admin"]')) === 1);
+    check(`${lang} adminpin: Hinweis „als Admin“`, (await count(page, ".admin-flag")) === 1);
+    await page.screenshot({ path: path.join(OUT, `${lang}_admin_elevated.png`), fullPage: false });
+    check(`${lang} adminpin: keine JS-Fehler`, errs.length === 0, errs.join(" ; "));
     await ctx.close();
 
     // Nicht angelegt: Vorschau + Anfrage

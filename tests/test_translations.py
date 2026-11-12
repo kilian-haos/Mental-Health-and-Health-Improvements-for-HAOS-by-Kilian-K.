@@ -82,6 +82,15 @@ class Translations(unittest.TestCase):
             self.assertEqual(ke - kd, set(), f"{name}: missing in de")
             self.assertEqual(kd - ke, set(), f"{name}: missing in en")
 
+    def test_every_ws_command_accepts_session_fields(self):
+        """The card sends session + admin_session with every call – all commands must accept them."""
+        code = (INT / "websocket.py").read_text(encoding="utf-8")
+        self.assertEqual(code.count("websocket_api.websocket_command("), 1)      # nur in _cmd()
+        n_cmds = len(re.findall(r"^@_cmd\(", code, re.M))
+        n_funcs = len(re.findall(r"^(?:async )?def ws_", code, re.M))
+        self.assertEqual(n_cmds, n_funcs)
+        self.assertNotIn("require_admin", code)
+
     def test_versions_match(self):
         man = json.loads((INT / "manifest.json").read_text(encoding="utf-8"))["version"]
         const = re.search(r'VERSION = "([\d.]+)"', (INT / "const.py").read_text(encoding="utf-8")).group(1)

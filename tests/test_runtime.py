@@ -306,6 +306,64 @@ class Pins(Base):
         self.assertTrue(self.aw(rt2.async_unlock_person("u_anna", "4711"))["ok"])
 
 
+class UnifiedPin(Base):
+    """One PIN field: personal PIN, or the admin PIN instead (admin rights for this session only)."""
+
+    def setUp(self):
+        super().setUp()
+        self.aw(self.rt.async_set_admin_pin("2468"))
+        self.aw(self.rt.async_set_pin("u_admin", None, "1357"))
+        self.aw(self.rt.async_set_pin("u_anna", None, "4711"))
+        self.rt.lock_user("u_admin")
+        self.rt.lock_user("u_anna")
+
+    def test_admin_with_personal_pin_gets_admin_area(self):
+        self.assertFalse(self.rt.admin_access(ADMIN, None))
+        r = self.aw(self.rt.async_unlock(ADMIN, "1357"))
+        self.assertTrue(r["ok"])
+        self.assertTrue(r["token"] and r["admin_token"])
+        self.assertFalse(r["elevated"])
+        self.assertTrue(self.rt.admin_access(ADMIN, r["admin_token"]))
+        self.assertTrue(self.rt.person_session_ok(self.kilian, "u_admin", r["token"]))
+
+    def test_non_admin_personal_pin_no_admin(self):
+        r = self.aw(self.rt.async_unlock(ANNA, "4711"))
+        self.assertTrue(r["ok"])
+        self.assertNotIn("admin_token", r)
+        self.assertFalse(self.rt.admin_access(ANNA, r.get("admin_token")))
+        self.assertFalse(self.rt.viewer(ANNA, None).is_admin)
+
+    def test_admin_pin_instead_elevates_this_session_only(self):
+        r = self.aw(self.rt.async_unlock(ANNA, "2468"))
+        self.assertTrue(r["ok"])
+        self.assertTrue(r["elevated"])
+        tok = r["admin_token"]
+        self.assertTrue(self.rt.admin_access(ANNA, tok))
+        self.assertTrue(self.rt.viewer(ANNA, tok).is_admin)
+        me = self.rt.me_payload(ANNA, tok)
+        self.assertTrue(me["admin_elevated"] and me["is_admin"] and me["admin_access"])
+        self.assertFalse(self.rt.me_payload(ANNA, None)["is_admin"])       # andere Sitzung: nichts
+        self.assertFalse(self.rt.admin_access(LENA, tok))                    # Token gehört Anna
+        # Admin-PIN entschlüsselt keine Texte
+        self.assertIsNone(self.anna.vault.tek)
+        self.rt.lock_user("u_anna")
+        self.assertFalse(self.rt.admin_access(ANNA, tok))
+
+    def test_wrong_pin_and_lockout(self):
+        for _ in range(3):
+            self.assertFalse(self.aw(self.rt.async_unlock(ANNA, "0000"))["ok"])
+        r = self.aw(self.rt.async_unlock(ANNA, "4711"))
+        self.assertFalse(r["ok"])
+        self.assertIn("locked_until", r)
+
+    def test_admin_pin_unset_no_elevation(self):
+        self.aw(self.rt.async_set_admin_pin(None))
+        r = self.aw(self.rt.async_unlock(ANNA, "2468"))
+        self.assertFalse(r["ok"])
+        self.assertTrue(self.rt.admin_access(ADMIN, None))                 # ohne Admin-PIN: Admins frei
+        self.assertFalse(self.rt.admin_access(ANNA, None))
+
+
 class Profile(Base):
     def test_rights_on_update(self):
         v_lena = self.rt.viewer(LENA)
