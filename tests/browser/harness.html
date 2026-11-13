@@ -18,6 +18,7 @@ const Q = new URLSearchParams(location.search);
 const LANG = Q.get("lang") || "de";
 const USER = Q.get("user") || "adult";            // adult | child | admin | new
 window.__calls = [];
+window.__msgid = 0;
 window.__errors = [];
 const DAY = 86400e3;
 const today = new Date(); today.setHours(12, 0, 0, 0);
@@ -84,10 +85,10 @@ let dseq = 0;
 function dumpOp(m) {
   const now = new Date().toISOString();
   if (m.op === "add") { const target = m.parent_id ? dfind(m.parent_id).x.children : dumpItems; (m.texts || []).forEach((t) => target.push({ id: "n" + (++dseq), text: t, done: false, created: now, done_at: null, children: [] })); }
-  if (m.op === "toggle") { const f = dfind(m.id); const set = (x) => { x.done = m.done; x.children.forEach(set); }; set(f.x); }
-  if (m.op === "edit") dfind(m.id).x.text = m.text;
-  if (m.op === "delete") { const f = dfind(m.id); f.xs.splice(f.xs.indexOf(f.x), 1); }
-  if (m.op === "step") { const f = dfind(m.id); const i = f.xs.indexOf(f.x);
+  if (m.op === "toggle") { const f = dfind(m.item_id); const set = (x) => { x.done = m.done; x.children.forEach(set); }; set(f.x); }
+  if (m.op === "edit") dfind(m.item_id).x.text = m.text;
+  if (m.op === "delete") { const f = dfind(m.item_id); f.xs.splice(f.xs.indexOf(f.x), 1); }
+  if (m.op === "step") { const f = dfind(m.item_id); const i = f.xs.indexOf(f.x);
     if (m.direction === "up" && i > 0) [f.xs[i - 1], f.xs[i]] = [f.xs[i], f.xs[i - 1]];
     if (m.direction === "down" && i < f.xs.length - 1) [f.xs[i + 1], f.xs[i]] = [f.xs[i], f.xs[i + 1]];
     if (m.direction === "indent" && i > 0) { f.xs.splice(i, 1); f.xs[i - 1].children.push(f.x); } }
@@ -225,7 +226,9 @@ const handlers = {
 const states = { "sensor.esp_32_01_master_bed_sensor": { state: "3.13" }, "notify.family": { state: "unknown" }, "script.push_an_ein_gerat": { state: "off" }, "sun.sun": { state: "above_horizon" } };
 window.hass = {
   language: LANG, locale: { language: LANG }, user: { id: "u1", is_admin: USER === "admin", name: "Kilian" }, states,
-  callWS: async (msg) => {
+  callWS: async (msg0) => {
+    // wie Home Assistant: die Nachrichtennummer "id" wird vom Client gesetzt und überschreibt ein gleichnamiges Feld
+    const msg = Object.assign({}, msg0, { id: ++window.__msgid });
     const type = msg.type.replace("mental_health/", "");
     window.__calls.push(msg);
     await new Promise((r) => setTimeout(r, 15));

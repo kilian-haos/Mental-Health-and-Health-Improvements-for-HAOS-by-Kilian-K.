@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1 – 2026-11-13
+
+- **Fixed: nothing could be added, ticked, edited or deleted on the brain dump page** ("something went wrong"). The item id was sent in a field named `id`, which Home Assistant uses for the websocket message number. It is now `item_id`. The browser test now numbers messages like Home Assistant does, and a new test forbids a command field named `id`.
+
 ## 1.1.0 – 2026-11-13
 
 - **Brain dump** (new module, on by default): a personal to-do / thought list with up to three levels.

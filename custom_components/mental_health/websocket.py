@@ -639,7 +639,7 @@ def ws_dump(hass: HomeAssistant, connection: Any, msg: dict) -> None:
 
 @_cmd({vol.Required("type"): f"{DOMAIN}/dump_op",
        vol.Required("op"): vol.In(["add", "toggle", "edit", "delete", "move", "step"]),
-       vol.Optional("id"): str, vol.Optional("parent_id"): vol.Any(str, None), vol.Optional("texts"): [str],
+       vol.Optional("item_id"): str, vol.Optional("parent_id"): vol.Any(str, None), vol.Optional("texts"): [str],
        vol.Optional("text"): str, vol.Optional("done"): bool, vol.Optional("index"): int,
        vol.Optional("direction"): vol.In(["up", "down", "indent", "outdent"])})
 @callback
@@ -657,15 +657,15 @@ def ws_dump_op(hass: HomeAssistant, connection: Any, msg: dict) -> None:
         if op == "add":
             BD.add(items, msg.get("texts") or [], now, msg.get("parent_id"))
         elif op == "toggle":
-            BD.set_done(items, msg["id"], bool(msg.get("done")), now)
+            BD.set_done(items, msg["item_id"], bool(msg.get("done")), now)
         elif op == "edit":
-            BD.edit(items, msg["id"], msg.get("text") or "")
+            BD.edit(items, msg["item_id"], msg.get("text") or "")
         elif op == "delete":
-            BD.delete(items, msg["id"])
+            BD.delete(items, msg["item_id"])
         elif op == "move":
-            BD.move(items, msg["id"], msg.get("parent_id"), int(msg.get("index") or 0))
+            BD.move(items, msg["item_id"], msg.get("parent_id"), int(msg.get("index") or 0))
         elif op == "step":
-            BD.step(items, msg["id"], msg.get("direction") or "up")
+            BD.step(items, msg["item_id"], msg.get("direction") or "up")
         p.vault.set_dump(items)
     except Locked:
         connection.send_error(msg["id"], ERR_LOCKED, "Locked")

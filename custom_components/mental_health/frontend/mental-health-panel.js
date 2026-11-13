@@ -901,7 +901,7 @@ class MHPanel extends HTMLElement {
     box.querySelectorAll("[data-pchk]").forEach((b) => b.addEventListener("click", () => {
       const done = !b.classList.contains("on");
       b.classList.toggle("on", done);
-      this.dumpOp("toggle", { id: b.dataset.pchk, done });
+      this.dumpOp("toggle", { item_id: b.dataset.pchk, done });
     }));
     box.querySelectorAll("[data-pmenu]").forEach((b) => b.addEventListener("click", () => {
       const id = b.dataset.pmenu;
@@ -923,9 +923,9 @@ class MHPanel extends HTMLElement {
         if (hasKids && !(await this.confirm(L("dump_delete_confirm"), L("delete")))) return;
         if (n && !reduced()) { n.style.transition = "opacity .2s, transform .2s"; n.style.opacity = "0"; n.style.transform = "translateX(10px)"; await new Promise((r) => setTimeout(r, 180)); }
         this._dumpMenu = null;
-        return this.dumpOp("delete", { id });
+        return this.dumpOp("delete", { item_id: id });
       }
-      this.dumpOp("step", { id, direction: op });
+      this.dumpOp("step", { item_id: id, direction: op });
     }));
     const sub = q(".psubin");
     if (sub) {
@@ -940,7 +940,7 @@ class MHPanel extends HTMLElement {
     }
     const ed = q(".dedit");
     if (ed) {
-      const save = async () => { const id = ed.dataset.pedit, text = ed.value.trim(); this._dumpEdit = null; if (text) await this.dumpOp("edit", { id, text }); else this.redrawDump(); };
+      const save = async () => { const id = ed.dataset.pedit, text = ed.value.trim(); this._dumpEdit = null; if (text) await this.dumpOp("edit", { item_id: id, text }); else this.redrawDump(); };
       ed.addEventListener("keydown", (ev) => { if (ev.key === "Enter") { ev.preventDefault(); save(); } if (ev.key === "Escape") { this._dumpEdit = null; this.redrawDump(); } });
       ed.addEventListener("blur", () => { if (this._dumpEdit) save(); });
     }

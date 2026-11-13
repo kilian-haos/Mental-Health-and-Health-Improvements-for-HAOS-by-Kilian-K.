@@ -91,6 +91,13 @@ class Translations(unittest.TestCase):
         self.assertEqual(n_cmds, n_funcs)
         self.assertNotIn("require_admin", code)
 
+    def test_no_command_field_named_id(self):
+        """'id' is the websocket message number – a command field with that name breaks every call."""
+        code = (INT / "websocket.py").read_text(encoding="utf-8")
+        self.assertNotRegex(code, r'vol\.(Optional|Required)\("id"\)')
+        js = (INT / "frontend" / "mental-health-panel.js").read_text(encoding="utf-8") + (INT / "frontend" / "mental-health.js").read_text(encoding="utf-8")
+        self.assertNotRegex(js, r'(call|dumpOp)\([^)]*\{\s*id\s*[:,}]')
+
     def test_versions_match(self):
         man = json.loads((INT / "manifest.json").read_text(encoding="utf-8"))["version"]
         const = re.search(r'VERSION = "([\d.]+)"', (INT / "const.py").read_text(encoding="utf-8")).group(1)
