@@ -6,7 +6,7 @@
 const SELF_URL = import.meta.url;
 (() => {
 if (window.__MH) return;
-const VERSION = "1.1.1";
+const VERSION = "1.1.2";
 const DOMAIN = "mental_health";
 const PANEL = "/mental-health";
 

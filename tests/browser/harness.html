@@ -198,7 +198,7 @@ const handlers = {
     birthdays: [{ name: "Anna", days: 0, turning: 41 }, { name: "Lena", days: 9, turning: 11 }], members: 3 }),
   profile: () => ({ profile, rights: me.rights, weight_hidden: false, weight_why: "", self: true, has_pin: false, picture: null, age: child ? 10 : 36, missing: [],
     notify_services: ["notify.mobile_app_s25", "notify.mobile_app_ipad"], platforms: { t1: "android" } }),
-  profile_update: (m) => { Object.assign(profile, m.changes); return Object.assign(handlers.profile(), { refused: {} }); },
+  profile_update: (m) => { const ch = Object.assign({}, m.changes); if (ch.schedule) ch.schedule = Object.assign({}, profile.schedule, ch.schedule); Object.assign(profile, ch); return Object.assign(handlers.profile(), { refused: {} }); },
   set_pin: () => ({ ok: true, has_pin: true, token: "tok" }),
   unlock: (m) => {
     if (m.pin === "9999") { me.is_admin = true; me.admin_elevated = true; me.admin_access = true; return { ok: true, admin_token: "atok", elevated: true }; }

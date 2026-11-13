@@ -196,7 +196,62 @@ const click = (page, sel, i = 0) => page.evaluate(`(() => { const l = (${deep})(
     // Profil + Quellen-Assistent + Modell
     ({ page, ctx, errs } = await open(browser, `lang=${lang}&user=adult&tab=profile`, DESK));
     check(`${lang} profile: Module`, (await count(page, "[data-mod]")) === 15);
-    check(`${lang} profile: Wochentagszeiten`, (await count(page, "[data-time]")) === 14);
+    // Check-in-Zeiten: eigene Zeitfelder (kein nativer Picker), schlafbasiert ohne Uhrzeiten
+    check(`${lang} profile: kein nativer Zeit-/Datumspicker`, (await count(page, 'input[type="time"], input[type="date"], input[type="datetime-local"]')) === 0);
+    check(`${lang} profile: zwei Zeitfenster`, (await count(page, ".slot")) === 2);
+    check(`${lang} profile: morgens ein Feld für jeden Tag`, (await count(page, '[data-timeall="morning"]')) === 1 && (await count(page, '[data-time="morning"]')) === 0);
+    check(`${lang} profile: schlafbasiert ohne Uhrzeiten`, (await count(page, '.slot[data-slot="evening"] .tin')) === 0 && (await count(page, '.slot[data-slot="evening"] [data-gap]')) === 1);
+    const lastSched = () => page.evaluate(() => { const c = window.__calls.filter((x) => x.type === "mental_health/profile_update" && x.changes.schedule); return c.length ? c[c.length - 1].changes.schedule : null; });
+    await page.evaluate(`(() => { const i = (${deep})('[data-timeall="morning"]')[0]; i.focus(); i.select(); })()`);
+    await page.keyboard.type("645");
+    await page.waitForTimeout(150);
+    check(`${lang} profile: Zeitmaske formatiert`, (await page.evaluate(`(${deep})('[data-timeall="morning"]')[0].value`)) === "06:45");
+    let sc = await lastSched();
+    check(`${lang} profile: jeden Tag gespeichert`, !!sc && sc.morning && sc.morning.times.every((t) => t === "06:45"), JSON.stringify(sc));
+    await page.evaluate(`(${deep})('[data-wdopen="morning"]')[0].click()`);
+    await page.waitForTimeout(400);
+    check(`${lang} profile: pro Wochentag 7 Felder`, (await count(page, '[data-time="morning"]')) === 7);
+    await page.evaluate(`(() => { const i = (${deep})('[data-time="morning"][data-i="5"]')[0]; i.focus(); i.select(); })()`);
+    await page.keyboard.type("915");
+    await page.waitForTimeout(150);
+    sc = await lastSched();
+    check(`${lang} profile: Samstag einzeln gespeichert`, !!sc && sc.morning.times[5] === "09:15" && sc.morning.times[0] === "06:45", JSON.stringify(sc && sc.morning));
+    // ungültige Zeit -> zurück auf alten Wert, nichts gespeichert
+    const nCalls = await page.evaluate(() => window.__calls.length);
+    await page.evaluate(`(() => { const i = (${deep})('[data-time="morning"][data-i="0"]')[0]; i.focus(); i.select(); })()`);
+    await page.keyboard.type("2");
+    await page.keyboard.press("Tab");
+    await page.waitForTimeout(150);
+    check(`${lang} profile: kurze Eingabe wird ergänzt`, (await page.evaluate(`(${deep})('[data-time="morning"][data-i="0"]')[0].value`)) === "02:00");
+    await page.evaluate(`(() => { const i = (${deep})('[data-time="morning"][data-i="1"]')[0]; i.focus(); i.value = "25:99"; i.dispatchEvent(new Event("blur")); })()`);
+    check(`${lang} profile: ungültige Zeit verworfen`, (await page.evaluate(`(${deep})('[data-time="morning"][data-i="1"]')[0].value`)) === "06:45");
+    // Pfeiltaste: +5 min
+    await page.evaluate(`(${deep})('[data-time="morning"][data-i="2"]')[0].focus()`);
+    await page.keyboard.press("ArrowUp");
+    await page.waitForTimeout(650);
+    sc = await lastSched();
+    check(`${lang} profile: Pfeiltaste +5 min`, !!sc && sc.morning.times[2] === "06:50", JSON.stringify(sc && sc.morning));
+    check(`${lang} profile: gültige Eingaben gespeichert`, (await page.evaluate(() => window.__calls.length)) > nCalls);
+    // Abstand zum Schlaf mit − / +
+    await page.evaluate(`(${deep})('[data-gap] .st-btn[data-d="1"]')[0].click()`);
+    await page.waitForTimeout(600);
+    let gapCalls = await page.evaluate(() => window.__calls.filter((c) => c.type === "mental_health/profile_update" && c.changes.schedule && c.changes.schedule.sleep_gap_min != null).map((c) => c.changes.schedule.sleep_gap_min));
+    check(`${lang} profile: Abstand + 5`, gapCalls.includes(25), JSON.stringify(gapCalls));
+    // Modus wechseln: abends feste Uhrzeit -> Uhrzeiten erscheinen, Abstand verschwindet
+    await page.evaluate(`(${deep})('[data-mode="evening"] .mseg[data-v="fixed"]')[0].click()`);
+    await page.waitForTimeout(500);
+    sc = await lastSched();
+    check(`${lang} profile: Moduswechsel gespeichert`, !!sc && sc.evening && sc.evening.mode === "fixed" && sc.evening.times.length === 7, JSON.stringify(sc));
+    check(`${lang} profile: abends Uhrzeit sichtbar`, (await count(page, '[data-timeall="evening"]')) === 1 && (await count(page, "[data-gap]")) === 0);
+    check(`${lang} profile: Moduswahl markiert`, (await page.evaluate(`(${deep})('[data-mode="evening"]')[0].style.getPropertyValue("--k")`)).trim() === "0");
+    await page.evaluate(`(${deep})('[data-mode="evening"] .mseg[data-v="entity"]')[0].click()`);
+    await page.waitForTimeout(500);
+    await (await page.evaluateHandle(`(${deep})('.slot')[0].closest('.sec')`)).asElement().screenshot({ path: path.join(OUT, `${lang}_profile_times_entity.png`) }).catch((e) => errs.push(String(e)));
+    check(`${lang} profile: Entität mit Versatz`, (await count(page, '[data-sent="evening"]')) === 1 && (await count(page, '[data-soff="evening"]')) === 1);
+    await page.evaluate(`(${deep})('[data-mode="evening"] .mseg[data-v="sleep"]')[0].click()`);
+    await page.waitForTimeout(500);
+    check(`${lang} profile: zurück auf Schlaf`, (await count(page, '.slot[data-slot="evening"] .tin')) === 0 && (await count(page, "[data-gap]")) === 1);
+    await (await page.evaluateHandle(`(${deep})('.slot')[0].closest('.sec')`)).asElement().screenshot({ path: path.join(OUT, `${lang}_profile_times.png`) }).catch((e) => errs.push(String(e)));
     await page.waitForTimeout(600);
     check(`${lang} profile: Modell-Canvas`, (await count(page, "canvas.model")) === 1);
     // Datumsmaske (2FA-Stil): Tippen springt weiter, gültiges Datum wird gespeichert
@@ -251,6 +306,19 @@ const click = (page, sel, i = 0) => page.evaluate(`(() => { const l = (${deep})(
     check(`${lang} profile: keine JS-Fehler`, errs.length === 0, errs.join(" ; "));
     await ctx.close();
 
+    // Profil am Handy: Check-in-Zeiten ohne Überlauf, auch pro Wochentag
+    ({ page, ctx, errs } = await open(browser, `lang=${lang}&user=adult&tab=profile`, PHONE));
+    await page.evaluate(`(${deep})('[data-wdopen="morning"]')[0].click()`);
+    await page.waitForTimeout(600);
+    const over = await page.evaluate(`(() => { const sec = (${deep})('.slot')[0].closest('.sec'); const r = sec.getBoundingClientRect(); const bad = [];
+      sec.querySelectorAll('*').forEach((e) => { const b = e.getBoundingClientRect(); if (b.width && (b.right > r.right + 0.5 || b.left < r.left - 0.5)) bad.push(e.tagName + '.' + e.className); }); return bad; })()`);
+    check(`${lang} profile phone: Zeiten ohne Überlauf`, over.length === 0, over.slice(0, 5).join(", "));
+    const segFit = await page.evaluate(`(${deep})('.mseg').every((b) => b.scrollWidth <= b.clientWidth + 1)`);
+    check(`${lang} profile phone: Modus-Beschriftungen passen`, segFit);
+    await (await page.evaluateHandle(`(${deep})('.slot')[0].closest('.sec')`)).asElement().screenshot({ path: path.join(OUT, `${lang}_profile_times_phone.png`) }).catch((e) => errs.push(String(e)));
+    check(`${lang} profile phone: keine JS-Fehler`, errs.length === 0, errs.join(" ; "));
+    await ctx.close();
+
     // Kind
     ({ page, ctx, errs } = await open(browser, `lang=${lang}&user=child&tab=today&open=evening`, PHONE));
     await click(page, "button.primary.pulse");
@@ -272,6 +340,12 @@ const click = (page, sel, i = 0) => page.evaluate(`(() => { const l = (${deep})(
     check(`${lang} admin: Personenliste`, (await count(page, ".person-row")) === 3);
     check(`${lang} admin: Anfrage`, (await text(page, "h3")).includes(T("Einrichtungs-Anfragen", "Setup requests")));
     check(`${lang} admin: Backup`, (await count(page, "[data-brs]")) === 1);
+    check(`${lang} admin: Uhrzeiten ohne nativen Picker`, (await count(page, "[data-sttime]")) === 4 && (await count(page, 'input[type="time"]')) === 0);
+    await page.evaluate(`(() => { const i = (${deep})('[data-sttime="nightly"]')[0]; i.focus(); i.select(); })()`);
+    await page.keyboard.type("0415");
+    await page.waitForTimeout(200);
+    const stc = await page.evaluate(() => window.__calls.filter((c) => c.type === "mental_health/admin_settings" || (c.changes && c.changes.nightly)).map((c) => JSON.stringify(c)));
+    check(`${lang} admin: Uhrzeit gespeichert`, stc.some((x) => x.includes('"04:15"')), stc.join(" | ").slice(0, 300) + " value=" + (await page.evaluate(`(${deep})('[data-sttime="nightly"]')[0].value`)));
     // Backup löschen mit Bestätigung
     await click(page, "[data-bdel]");
     await page.waitForTimeout(300);

@@ -109,10 +109,10 @@ Was jemand nicht ändern darf, ist ausgegraut mit kurzem Grund – nie versteckt
 
 ### Auslöser (pro Person, getrennt für morgens und abends)
 
-1. **Feste Uhrzeit** pro Wochentag (Standard 07:30 / 21:00).
+1. **Uhrzeit** – eine Zeit für jeden Tag oder pro Wochentag (Standard 07:30 / 21:00).
 2. **Zeitstempel-Entität** + Versatz (z. B. der nächste Wecker des Handys, ein Kalender).
-3. **Schlafbasiert** (mit Schlafquelle): morgens ≈ *Abstand* nach dem Aufstehen, abends ≈ 1,5 × *Abstand* vor dem vorhergesagten Zubettgehen. Ein Einstellwert, **Abstand zum Schlaf** (Standard 20 min); der tatsächliche Versatz wird anhand deiner Antwortzeiten verfeinert. Bei unsicherer Erkennung gilt die feste Uhrzeit.
-4. **Nur manuell / Automation** (Dienst `mental_health.start_checkin`, Button-Entitäten).
+3. **Schlaf** (mit Schlafquelle): morgens ≈ *Abstand* nach dem Aufstehen, abends ≈ 1,5 × *Abstand* vor dem vorhergesagten Zubettgehen. Ein Einstellwert, **Abstand zum Schlaf** (Standard 20 min); der tatsächliche Versatz wird anhand deiner Antwortzeiten verfeinert. Bei unsicherer Erkennung gilt die feste Uhrzeit.
+4. **Manuell** – nur von Hand oder per Automation (Dienst `mental_health.start_checkin`, Button-Entitäten).
 
 ## Benachrichtigungen
 

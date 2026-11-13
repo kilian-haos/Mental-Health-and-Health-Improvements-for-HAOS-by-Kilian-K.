@@ -73,8 +73,12 @@ Object.assign(M.I18N.en, {
   m_sleep_tracking: "Sleep tracking (sensors)", m_good_bad: "Good & bad things", m_goals: "Intentions & goals", m_journal: "Journal",
   m_weight: "Weight", m_training: "Training", m_training_child: "Exercise", m_cycle: "Cycle", m_birthday: "Birthday", m_suggestions: "Local suggestions",
   m_llm: "LLM features (beta)", m_core: "always on", m_cycle_hint: "Only with sex female or other.",
-  p_times: "Check-in times", t_mode: "Trigger", mode_fixed: "Fixed time", mode_entity: "Entity", mode_sleep: "Sleep based", mode_manual: "Only manual / automation",
-  t_entity: "Timestamp entity (e.g. alarm)", t_offset: "Offset (min)", t_gap: "Gap to sleep (min)", t_gap_hint: "Morning ≈ this after getting up, evening ≈ 1.5 × before bedtime – fine-tuned by your answer times.",
+  p_times: "Check-in times", t_mode: "Trigger", mode_fixed: "Time", mode_entity: "Entity", mode_sleep: "Sleep", mode_manual: "Manual",
+  mh_fixed: "At a fixed time – the same every day or per weekday.", mh_entity: "At the time of an entity, e.g. your alarm, plus an offset.",
+  mh_sleep: "Follows your sleep: in the morning after you get up, in the evening before bedtime. Without sleep data the fixed time applies.",
+  mh_manual: "No automatic reminder – start the check-in yourself or from an automation.", mh_sleep_need: "Needs a sleep source first.",
+  t_every_day: "Every day", t_per_day: "Per weekday", t_offset_hint: "Minutes before (−) or after (+) the entity's time.",
+  t_entity: "Timestamp entity (e.g. alarm)", t_offset: "Offset", t_gap: "Gap to sleep", t_gap_hint: "Morning ≈ this after getting up, evening ≈ 1.5 × before bedtime – fine-tuned by your answer times.",
   t_same: "Same every day", weekdays: "Mon,Tue,Wed,Thu,Fri,Sat,Sun", p_pause: "Pause", pause_on: "Pause now", pause_off: "End pause",
   pause_until: "Until (optional)", p_pin: "Personal PIN", pin_on: "Set PIN", pin_change: "Change PIN", pin_off: "Remove PIN",
   pin_hint: "Protects your texts (journal, good/bad things, goals, cycle details) with a key derived from your PIN. Without the PIN nobody can read them – not even admins. If you forget it, an admin can reset it, but these texts are then lost for good. Numbers (mood, sleep …) keep working.",
@@ -193,8 +197,12 @@ Object.assign(M.I18N.de, {
   m_sleep_tracking: "Schlaf-Tracking (Sensoren)", m_good_bad: "Gute & schlechte Dinge", m_goals: "Vorsätze & Ziele", m_journal: "Journal",
   m_weight: "Gewicht", m_training: "Training", m_training_child: "Bewegung", m_cycle: "Zyklus", m_birthday: "Geburtstag", m_suggestions: "Lokale Vorschläge",
   m_llm: "LLM-Funktionen (Beta)", m_core: "immer an", m_cycle_hint: "Nur bei Geschlecht weiblich oder anderes.",
-  p_times: "Check-in-Zeiten", t_mode: "Auslöser", mode_fixed: "Feste Uhrzeit", mode_entity: "Entität", mode_sleep: "Schlafbasiert", mode_manual: "Nur manuell / Automation",
-  t_entity: "Zeitstempel-Entität (z. B. Wecker)", t_offset: "Versatz (min)", t_gap: "Abstand zum Schlaf (min)", t_gap_hint: "Morgens ≈ so lange nach dem Aufstehen, abends ≈ 1,5 × vor dem Zubettgehen – verfeinert anhand deiner Antwortzeiten.",
+  p_times: "Check-in-Zeiten", t_mode: "Auslöser", mode_fixed: "Uhrzeit", mode_entity: "Entität", mode_sleep: "Schlaf", mode_manual: "Manuell",
+  mh_fixed: "Zu einer festen Uhrzeit – jeden Tag gleich oder pro Wochentag.", mh_entity: "Zur Zeit einer Entität, z. B. deinem Wecker, plus Versatz.",
+  mh_sleep: "Richtet sich nach deinem Schlaf: morgens nach dem Aufstehen, abends vor dem Zubettgehen. Ohne Schlafdaten gilt die feste Uhrzeit.",
+  mh_manual: "Keine automatische Erinnerung – starte den Check-in selbst oder per Automation.", mh_sleep_need: "Braucht zuerst eine Schlafquelle.",
+  t_every_day: "Jeden Tag", t_per_day: "Pro Wochentag", t_offset_hint: "Minuten vor (−) oder nach (+) der Zeit der Entität.",
+  t_entity: "Zeitstempel-Entität (z. B. Wecker)", t_offset: "Versatz", t_gap: "Abstand zum Schlaf", t_gap_hint: "Morgens ≈ so lange nach dem Aufstehen, abends ≈ 1,5 × vor dem Zubettgehen – verfeinert anhand deiner Antwortzeiten.",
   t_same: "Jeden Tag gleich", weekdays: "Mo,Di,Mi,Do,Fr,Sa,So", p_pause: "Pause", pause_on: "Jetzt pausieren", pause_off: "Pause beenden",
   pause_until: "Bis (optional)", p_pin: "Persönliche PIN", pin_on: "PIN festlegen", pin_change: "PIN ändern", pin_off: "PIN entfernen",
   pin_hint: "Schützt deine Texte (Journal, gute/schlechte Dinge, Ziele, Zyklus-Details) mit einem Schlüssel aus deiner PIN. Ohne PIN kann sie niemand lesen – auch Admins nicht. Vergisst du sie, kann ein Admin sie zurücksetzen, die Texte sind dann aber endgültig verloren. Zahlen (Stimmung, Schlaf …) laufen weiter.",
@@ -326,15 +334,55 @@ canvas.model{ width:100%; height:280px; display:block; border-radius:var(--rad-i
 .steps{ display:flex; gap:6px; margin-bottom:14px; }
 .steps i{ flex:1; height:4px; border-radius:2px; background:var(--c-raise2); transition:background .3s; }
 .steps i.on{ background:var(--c-teal); }
-.wd-times{ display:grid; grid-template-columns:repeat(auto-fill,minmax(104px,1fr)); gap:8px; }
-.wd-times .wd{ display:flex; flex-direction:column; gap:4px; min-width:0; overflow:hidden; }
-.wd-times .wd span{ font-size:11px; color:var(--c-muted); padding-left:4px; }
-.wd-times input{ display:block; width:100%; max-width:100%; min-width:0; padding:8px 8px 8px 10px; font-size:14px; font-variant-numeric:tabular-nums; }
-.wd-times input::-webkit-date-and-time-value{ text-align:left; }
-.wd-times input::-webkit-calendar-picker-indicator{ opacity:.55; margin-left:2px; cursor:pointer; }
-.modes{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
-.modes .chip{ padding:8px 13px; font-size:13px; }
-.modes .chip:disabled{ opacity:.4; }
+.slot{ padding:2px 0 4px; }
+.slot + .slot{ border-top:1px solid rgba(255,255,255,.06); margin-top:16px; padding-top:18px; }
+.slot-title{ font-size:14px; font-weight:600; margin:0 0 10px 2px; display:flex; align-items:center; gap:8px; }
+.msegs{ position:relative; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); background:var(--c-raise); border-radius:999px; padding:4px; isolation:isolate; }
+.msegs::before{ content:""; position:absolute; z-index:-1; top:4px; bottom:4px; left:4px; width:calc((100% - 8px) / 4); border-radius:999px; background:var(--c-active);
+  transform:translateX(calc(100% * var(--k, 0))); transition:transform .38s var(--spring); }
+.mseg{ background:transparent; padding:9px 4px; font-size:13px; color:var(--c-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; transition:color .2s var(--ease); }
+.mseg.on{ background:transparent; color:var(--c-teal); font-weight:600; }
+@media (hover:hover){ .mseg:not(:disabled):not(.on):hover{ background:transparent; color:var(--c-text); } }
+.mseg:disabled{ opacity:.38; }
+.mhint{ font-size:12px; color:var(--c-muted); line-height:1.45; margin:9px 4px 0; animation:mh-fade .3s var(--ease); }
+.mhint .need{ color:var(--c-amber); }
+.slot-body{ margin-top:12px; animation:mh-rise .32s var(--ease) both; }
+.slot-body .field{ margin:0 0 6px; }
+.wd-times{ display:grid; grid-template-columns:repeat(auto-fill,minmax(112px,1fr)); gap:8px; }
+.tcell{ display:flex; align-items:center; gap:6px; height:46px; padding:0 4px 0 13px; min-width:0; cursor:text; background:var(--c-raise); border-radius:14px;
+  border:1.5px solid rgba(255,255,255,.09); border-color:color-mix(in srgb, var(--c-line) 75%, transparent);
+  transition:border-color .2s var(--ease), background .2s, box-shadow .2s; }
+.wd-times .tcell{ animation:mh-pop .28s var(--spring) both; animation-delay:calc(var(--i, 0) * 25ms); }
+.tcell > span{ font-size:12px; font-weight:600; color:var(--c-muted); flex:0 0 auto; }
+.tcell.we > span{ color:var(--c-amber); }
+.tcell .tin{ flex:1 1 auto; min-width:0; width:100%; height:100%; border:0; background:transparent; box-shadow:none; padding:0 9px 0 4px; border-radius:0;
+  text-align:right; font-size:16px; font-weight:600; font-variant-numeric:tabular-nums; letter-spacing:.3px; }
+.tcell .tin:focus, .tcell .tin:hover{ background:transparent; box-shadow:none; }
+.tcell .tin::placeholder{ color:var(--c-muted); opacity:.55; font-weight:500; }
+.tcell:focus-within{ border-color:var(--c-teal); background:var(--c-raise2); box-shadow:0 0 0 3px var(--c-active); }
+@media (hover:hover){ .tcell:not(:focus-within):hover{ border-color:color-mix(in srgb, var(--c-teal) 45%, var(--c-line)); } }
+.tcell.err{ border-color:var(--c-red); }
+.tcell.tick{ animation:mh-tick .32s var(--spring); }
+.tcell.solo{ width:112px; padding:0 4px; }
+.tcell.solo .tin{ text-align:center; padding:0 6px; }
+.tcell[aria-disabled="true"]{ opacity:.6; }
+.tsame{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.tsame .tcell{ flex:1 1 170px; max-width:240px; }
+.slot-foot{ display:flex; justify-content:flex-end; margin-top:10px; }
+.linkbtn{ padding:9px 14px; font-size:13px; display:inline-flex; align-items:center; gap:6px; }
+.linkbtn .chev{ font-size:15px; line-height:1; color:var(--c-muted); }
+.kv.tight{ border-bottom:0; padding:4px 0; }
+.stepper{ display:inline-flex; align-items:center; gap:2px; padding:3px; background:var(--c-raise); border-radius:999px; border:1.5px solid rgba(255,255,255,.09);
+  border-color:color-mix(in srgb, var(--c-line) 75%, transparent); transition:border-color .2s var(--ease), box-shadow .2s; }
+.stepper:focus-within{ border-color:var(--c-teal); box-shadow:0 0 0 3px var(--c-active); }
+.stepper .st-btn{ width:34px; height:34px; padding:0; border-radius:50%; font-size:18px; line-height:1; background:var(--c-raise2); color:var(--c-text); flex:0 0 auto; }
+.stepper input{ width:50px; border:0; background:transparent; box-shadow:none; padding:0 2px; border-radius:0; text-align:right; font-size:16px; font-weight:600; font-variant-numeric:tabular-nums; }
+.stepper input:focus, .stepper input:hover{ background:transparent; box-shadow:none; }
+.stepper .unit{ font-size:12px; color:var(--c-muted); padding:0 6px 0 2px; }
+.stepper.tick input{ animation:mh-tick .3s var(--spring); }
+.stepper[aria-disabled="true"]{ opacity:.55; }
+.pause-h{ border-top:1px solid rgba(255,255,255,.06); padding-top:18px; margin-top:20px !important; }
+@keyframes mh-tick{ 0%{ transform:scale(1) } 40%{ transform:scale(1.05) } 100%{ transform:none } }
 .admin-flag{ display:inline-flex; align-items:center; gap:6px; }
 .kbtn{ padding:8px 12px; font-size:15px; }
 .dm-row{ display:flex; align-items:center; gap:6px; width:100%; max-width:380px; }
@@ -524,6 +572,115 @@ function bindDateMask(box, onChange) {
   const row = box.parentElement;
   const clr = row && row.querySelector("[data-dmclear]");
   if (clr) clr.addEventListener("click", () => { cells.forEach((x) => { x.value = ""; }); box.classList.remove("err"); emit(true); focusCell(0); });
+}
+
+/* ---- Uhrzeit-Feld HH:MM ----
+   Eigenes Textfeld statt <input type="time">: Der native Uhrzeit-Auswähler hat die macOS-App
+   (WKWebView) beim Anklicken abstürzen lassen und sieht in jedem Browser anders aus. */
+function timeFieldHtml(attrs, value, disabled) {
+  return `<input type="text" class="tin" inputmode="numeric" autocomplete="off" spellcheck="false" maxlength="5" placeholder="--:--" value="${esc(value || "")}" ${attrs} ${disabled ? "disabled" : ""}>`;
+}
+/* "7" -> 07:00, "21:3" -> 21:30, "730" -> 07:30, "2130"/"21.30" -> 21:30; leer -> null; ungültig -> undefined */
+function tmNormalize(raw) {
+  const s = String(raw == null ? "" : raw).trim();
+  if (!s) return null;
+  let h, m;
+  const c = /^(\d{1,2})\s*[:.h]\s*(\d{0,2})$/.exec(s);
+  if (c) { h = +c[1]; m = c[2] ? +c[2].padEnd(2, "0") : 0; }
+  else if (/^\d{1,4}$/.test(s)) {
+    if (s.length <= 2) { h = +s; m = 0; } else if (s.length === 3) { h = +s[0]; m = +s.slice(1); } else { h = +s.slice(0, 2); m = +s.slice(2); }
+  } else return undefined;
+  if (h > 23 || m > 59) return undefined;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+/* Pfeiltasten: auf das nächste Vielfache von step springen (21:03 +5 -> 21:05) */
+function tmStep(v, delta) {
+  const t = tmNormalize(v) || "00:00", st = Math.abs(delta), cur = +t.slice(0, 2) * 60 + +t.slice(3);
+  let n = delta > 0 ? Math.floor(cur / st) * st + st : Math.ceil(cur / st) * st - st;
+  n = ((n % 1440) + 1440) % 1440;
+  return `${String(Math.floor(n / 60)).padStart(2, "0")}:${String(n % 60).padStart(2, "0")}`;
+}
+function bindTimeField(inp, onChange) {
+  const cell = inp.closest(".tcell") || inp;
+  let last = tmNormalize(inp.value) || null, timer = null;
+  const tick = () => { cell.classList.remove("tick"); void cell.offsetWidth; cell.classList.add("tick"); };
+  const commit = (v, later) => {
+    cell.classList.remove("err");
+    inp.value = v;
+    if (v === last) return;
+    last = v; tick();
+    clearTimeout(timer);
+    if (later) timer = setTimeout(() => onChange(v), 500); else onChange(v);
+  };
+  const caretEnd = () => { try { const n = inp.value.length; inp.setSelectionRange(n, n); } catch (e) { /* ignorieren */ } };
+  inp.addEventListener("focus", () => setTimeout(caretEnd, 0));
+  inp.addEventListener("beforeinput", () => { inp._prev = inp.value.replace(/\D/g, ""); });
+  inp.addEventListener("keydown", (ev) => {
+    if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+    if (ev.key === "ArrowUp" || ev.key === "ArrowDown") {
+      ev.preventDefault();
+      commit(tmStep(inp.value || last, (ev.shiftKey ? 60 : 5) * (ev.key === "ArrowUp" ? 1 : -1)), true);
+      caretEnd();
+    } else if (ev.key === "Enter") { ev.preventDefault(); inp.blur(); }
+    else if (ev.key === "Escape") { inp.value = last || ""; cell.classList.remove("err"); inp.blur(); }
+    else if (/^[0-9]$/.test(ev.key) && inp.value.length >= 5 && inp.selectionStart === inp.selectionEnd && inp.selectionStart >= 5) {
+      inp.value = "";      // volles Feld, Cursor am Ende: neue Ziffer beginnt eine neue Uhrzeit
+    } else if (ev.key.length === 1 && !/[0-9:.]/.test(ev.key)) ev.preventDefault();
+  });
+  inp.addEventListener("input", (ev) => {
+    const raw = inp.value, pos = inp.selectionStart == null ? raw.length : inp.selectionStart;
+    const del = !!(ev.inputType && ev.inputType.startsWith("delete"));
+    let d = raw.replace(/\D/g, ""), before = raw.slice(0, pos).replace(/\D/g, "").length;
+    if (del && d === inp._prev && d.length > 2) { d = d.slice(0, 1) + d.slice(2); before = 1; }   // nur der Doppelpunkt wurde gelöscht
+    if (!del && d && (+d[0] > 2 || (d.length >= 2 && +d.slice(0, 2) > 23))) { d = "0" + d; before++; }   // "7" -> 07:
+    d = d.slice(0, 4);
+    inp.value = d.length <= 2 ? d : `${d.slice(0, 2)}:${d.slice(2)}`;
+    const p = Math.min(inp.value.length, before <= 2 ? before : before + 1);
+    try { inp.setSelectionRange(p, p); } catch (e) { /* ignorieren */ }
+    const v = d.length === 4 ? tmNormalize(inp.value) : null;
+    cell.classList.toggle("err", d.length === 4 && v === undefined);
+    if (v) commit(v);
+  });
+  inp.addEventListener("blur", () => {
+    const v = tmNormalize(inp.value);
+    if (v === undefined) { shake(cell); inp.value = last || ""; setTimeout(() => cell.classList.remove("err"), 450); return; }
+    if (v === null) { inp.value = last || ""; return; }
+    clearTimeout(timer);
+    if (v !== last) commit(v); else inp.value = v;
+  });
+}
+/* ---- Zahlenfeld mit − / + (ohne <input type="number">) ---- */
+function stepperHtml(attrs, value, o = {}) {
+  const dis = o.disabled ? "disabled" : "";
+  return `<div class="stepper" ${attrs} data-min="${o.min}" data-max="${o.max}" data-step="${o.step || 1}" aria-disabled="${o.disabled ? "true" : "false"}">
+    <button type="button" class="st-btn" data-d="-1" aria-label="−" ${dis}>−</button><input type="text" inputmode="numeric" autocomplete="off" value="${esc(String(value == null ? "" : value))}" ${dis}>${o.unit ? `<span class="unit">${esc(o.unit)}</span>` : ""}<button type="button" class="st-btn" data-d="1" aria-label="+" ${dis}>+</button></div>`;
+}
+function bindStepper(box, onChange) {
+  const inp = box.querySelector("input"), min = +box.dataset.min, max = +box.dataset.max, step = +box.dataset.step || 1;
+  let last = parseInt(inp.value, 10), timer = null;
+  const set = (n, now) => {
+    n = Math.max(min, Math.min(max, n));
+    inp.value = String(n);
+    if (n === last) return;
+    last = n;
+    box.classList.remove("tick"); void box.offsetWidth; box.classList.add("tick");
+    clearTimeout(timer);
+    if (now) onChange(n); else timer = setTimeout(() => onChange(n), 450);
+  };
+  const cur = () => { const n = parseInt(inp.value, 10); return isNaN(n) ? last : n; };
+  const move = (d) => { const c = cur(); set(d > 0 ? Math.floor(c / step) * step + step : Math.ceil(c / step) * step - step); };
+  box.querySelectorAll(".st-btn").forEach((b) => b.addEventListener("click", () => move(+b.dataset.d)));
+  inp.addEventListener("input", () => { const neg = min < 0 && inp.value.trim().startsWith("-"); inp.value = (neg ? "-" : "") + inp.value.replace(/\D/g, "").slice(0, 4); });
+  inp.addEventListener("keydown", (ev) => {
+    if (ev.key === "ArrowUp" || ev.key === "ArrowDown") { ev.preventDefault(); move(ev.key === "ArrowUp" ? 1 : -1); }
+    else if (ev.key === "Enter") { ev.preventDefault(); inp.blur(); }
+  });
+  inp.addEventListener("change", () => {
+    const n = parseInt(inp.value, 10);
+    if (isNaN(n)) { inp.value = String(last); shake(box); return; }
+    if (n < min || n > max) shake(box);
+    set(n, true);
+  });
 }
 
 const TAB_ICONS = { today: "☀️", insights: "✨", history: "🗓️", family: "🏡", profile: "👤", admin: "🛠️" };
@@ -1280,16 +1437,8 @@ class MHPanel extends HTMLElement {
         <button class="toggle ${p.modules[m] ? "on" : ""}" data-mod="${m}" ${locked || cycleNo || llmNo || !can("modules_edit") ? "disabled" : ""}></button></div>`;
     }).join("")}`);
     // Zeiten + Pause
-    const sch = p.schedule;
-    const slotHtml = (slot) => {
-      const s = sch[slot];
-      return `<h4>${esc(L(slot))}</h4><div class="modes" data-mode="${slot}">${["fixed", "entity", "sleep", "manual"].map((m) => `<button class="chip ${s.mode === m ? "on" : ""}" data-v="${m}" ${(m === "sleep" && !(p.sleep_sources || []).length) || !can("schedule_edit") ? "disabled" : ""}>${esc(L("mode_" + m))}</button>`).join("")}</div>
-        ${s.mode === "fixed" || s.mode === "sleep" ? `<div class="wd-times">${s.times.map((t, k) => `<label class="wd"><span>${esc(L("weekdays").split(",")[k])}</span><input type="time" data-time="${slot}" data-i="${k}" value="${esc(t)}" ${dis("schedule_edit")}></label>`).join("")}</div>` : ""}
-        ${s.mode === "entity" ? `<div class="grid2"><div><label class="lbl">${esc(L("t_entity"))}</label><input list="mh-sensors" data-sent="${slot}" value="${esc(s.entity || "")}" ${dis("schedule_edit")}></div><div><label class="lbl">${esc(L("t_offset"))}</label><input type="number" data-soff="${slot}" value="${s.offset_min || 0}" ${dis("schedule_edit")}></div></div>` : ""}`;
-    };
-    sec(`<h3>⏰ ${esc(L("p_times"))}</h3>${lockedNote("schedule_edit")}${slotHtml("morning")}${slotHtml("evening")}
-      ${(p.sleep_sources || []).length ? `<div class="field" style="margin-top:12px"><label class="lbl">${esc(L("t_gap"))}</label><input type="number" min="5" max="90" data-gap value="${sch.sleep_gap_min}" ${dis("schedule_edit")}><div class="hint">${esc(L("t_gap_hint"))}</div></div>` : ""}
-      <h4>⏸️ ${esc(L("p_pause"))}</h4>${p.pause ? `<div class="row"><span class="chip amber">${esc(p.pause.until ? L("paused_until", { d: fmtDate(p.pause.until, lang) }) : L("paused"))}</span><span class="spacer"></span><button class="pauseoff" ${dis("pause")}>${esc(L("pause_off"))}</button></div>`
+    sec(`<h3>⏰ ${esc(L("p_times"))}</h3>${lockedNote("schedule_edit")}${["morning", "evening"].map((x) => this.slotHtml(pv, x)).join("")}
+      <h4 class="pause-h">⏸️ ${esc(L("p_pause"))}</h4>${p.pause ? `<div class="row"><span class="chip amber">${esc(p.pause.until ? L("paused_until", { d: fmtDate(p.pause.until, lang) }) : L("paused"))}</span><span class="spacer"></span><button class="pauseoff" ${dis("pause")}>${esc(L("pause_off"))}</button></div>`
         : `<label class="lbl">${esc(L("pause_until"))}</label>${dateMaskHtml("pause_until", null, lang, { clear: true, disabled: !can("pause") })}
           <div class="row" style="margin-top:12px;justify-content:flex-end"><button class="pauseon" ${dis("pause")}>${esc(L("pause_on"))}</button></div>`}`);
     // Benachrichtigungen
@@ -1338,6 +1487,87 @@ class MHPanel extends HTMLElement {
     Object.assign(pv, res);
     return res;
   }
+  /* Check-in-Zeiten: ein Block je Zeitfenster (Modus-Schalter, kurzer Hinweis, nur die Felder des Modus) */
+  slotHtml(pv, slot) {
+    const L = (k, v) => this.t(k, v), p = pv.profile, R = pv.rights, sch = p.schedule, s = sch[slot];
+    const ok = !!(R.schedule_edit && R.schedule_edit.ok), hasSleep = (p.sleep_sources || []).length > 0;
+    const modes = ["fixed", "entity", "sleep", "manual"], k = Math.max(0, modes.indexOf(s.mode));
+    const wdn = L("weekdays").split(",");
+    let body = "";
+    if (s.mode === "fixed") {
+      const same = s.times.every((t) => t === s.times[0]);
+      const open = !same || !!(this._wdOpen && this._wdOpen[slot]);
+      body = open
+        ? `<div class="wd-times">${s.times.map((t, i) => `<label class="tcell ${i > 4 ? "we" : ""}" style="--i:${i}" aria-disabled="${!ok}"><span>${esc(wdn[i])}</span>${timeFieldHtml(`data-time="${slot}" data-i="${i}" aria-label="${esc(L(slot) + " " + wdn[i])}"`, t, !ok)}</label>`).join("")}</div>
+          ${ok ? `<div class="slot-foot"><button class="ghost linkbtn" data-wdsame="${slot}">${esc(L("t_same"))}</button></div>` : ""}`
+        : `<div class="tsame"><label class="tcell" aria-disabled="${!ok}"><span>${esc(L("t_every_day"))}</span>${timeFieldHtml(`data-timeall="${slot}" aria-label="${esc(L(slot) + " " + L("t_every_day"))}"`, s.times[0], !ok)}</label>
+          ${ok ? `<button class="ghost linkbtn" data-wdopen="${slot}">${esc(L("t_per_day"))}<span class="chev">›</span></button>` : ""}</div>`;
+    } else if (s.mode === "entity") {
+      body = `<div class="field"><label class="lbl">${esc(L("t_entity"))}</label><input list="mh-sensors" data-sent="${slot}" value="${esc(s.entity || "")}" placeholder="input_datetime.…" ${ok ? "" : "disabled"}></div>
+        <div class="kv tight"><div>${esc(L("t_offset"))}<div class="why">${esc(L("t_offset_hint"))}</div></div>${stepperHtml(`data-soff="${slot}"`, s.offset_min || 0, { min: -720, max: 720, step: 5, unit: "min", disabled: !ok })}</div>`;
+    } else if (s.mode === "sleep" && ["morning", "evening"].find((x) => sch[x].mode === "sleep") === slot) {
+      // Abstand gilt für beide Zeitfenster -> nur einmal zeigen
+      body = `<div class="kv tight"><div>${esc(L("t_gap"))}<div class="why">${esc(L("t_gap_hint"))}</div></div>${stepperHtml("data-gap", sch.sleep_gap_min, { min: 5, max: 90, step: 5, unit: "min", disabled: !ok })}</div>`;
+    }
+    return `<div class="slot" data-slot="${slot}"><div class="slot-title">${slot === "morning" ? "🌅" : "🌙"} ${esc(L(slot))}</div>
+      <div class="msegs" data-mode="${slot}" style="--k:${k}" role="radiogroup" aria-label="${esc(L("t_mode"))}">${modes.map((m) => `<button class="mseg ${s.mode === m ? "on" : ""}" data-v="${m}" role="radio" aria-checked="${s.mode === m}" ${(m === "sleep" && !hasSleep) || !ok ? "disabled" : ""}${m === "sleep" && !hasSleep ? ` title="${esc(L("mh_sleep_need"))}"` : ""}>${esc(L("mode_" + m))}</button>`).join("")}</div>
+      <div class="mhint">${esc(L("mh_" + s.mode))}${s.mode === "sleep" && !hasSleep ? ` <span class="need">${esc(L("mh_sleep_need"))}</span>` : ""}</div>
+      ${body ? `<div class="slot-body">${body}</div>` : ""}</div>`;
+  }
+  bindSlot(el, pv, admin) {
+    const slot = el.dataset.slot, sched = () => pv.profile.schedule;
+    el._src = this.slotHtml(pv, slot);
+    const save = (ch, redraw) => this.saveProfile(pv, ch, admin).then(() => { if (redraw) this.redrawSlots(el.closest(".sec"), pv, admin); });
+    // sofort lokal übernehmen, damit schnelle Folgeänderungen nicht auf altem Stand aufbauen
+    const upd = (obj, redraw) => { pv.profile.schedule = Object.assign({}, sched(), { [slot]: Object.assign({}, sched()[slot], obj) }); return save({ schedule: { [slot]: pv.profile.schedule[slot] } }, redraw); };
+    const segs = el.querySelector(".msegs");
+    if (segs && !segs._bound) {
+      segs._bound = true;
+      segs.querySelectorAll(".mseg").forEach((b, k) => b.addEventListener("click", () => {
+        if (b.classList.contains("on")) return;
+        segs.style.setProperty("--k", k);
+        segs.querySelectorAll(".mseg").forEach((x) => { x.classList.toggle("on", x === b); x.setAttribute("aria-checked", String(x === b)); });
+        // el kann nach dem Neuzeichnen schon ersetzt sein -> Abschnitt über den (bleibenden) Schalter finden
+        upd({ mode: b.dataset.v }).then(() => this.redrawSlots(segs.closest(".sec"), pv, admin));
+      }));
+    }
+    el.querySelectorAll("[data-time]").forEach((inp) => bindTimeField(inp, (v) => { const times = sched()[slot].times.slice(); times[+inp.dataset.i] = v; upd({ times }); }));
+    const all = el.querySelector("[data-timeall]");
+    if (all) bindTimeField(all, (v) => upd({ times: Array(7).fill(v) }));
+    const op = el.querySelector("[data-wdopen]");
+    if (op) op.addEventListener("click", () => { this._wdOpen = Object.assign({}, this._wdOpen, { [slot]: true }); this.redrawSlots(el.closest(".sec"), pv, admin); });
+    const sm = el.querySelector("[data-wdsame]");
+    if (sm) sm.addEventListener("click", () => {
+      this._wdOpen = Object.assign({}, this._wdOpen, { [slot]: false });
+      const t = sched()[slot].times;
+      if (t.every((x) => x === t[0])) this.redrawSlots(el.closest(".sec"), pv, admin);
+      else upd({ times: Array(7).fill(t[0]) }, true);
+    });
+    const ent = el.querySelector("[data-sent]");
+    if (ent) ent.addEventListener("change", () => upd({ entity: ent.value.trim() || null }));
+    const off = el.querySelector("[data-soff]");
+    if (off) bindStepper(off, (n) => upd({ offset_min: n }));
+    const gap = el.querySelector("[data-gap]");
+    if (gap) bindStepper(gap, (n) => { pv.profile.schedule = Object.assign({}, sched(), { sleep_gap_min: n }); save({ schedule: { sleep_gap_min: n } }); });
+  }
+  /* nur geänderte Zeitfenster neu zeichnen; der Modus-Schalter bleibt stehen, damit seine Animation durchläuft */
+  redrawSlots(sec, pv, admin) {
+    if (!sec) return;
+    sec.querySelectorAll(".slot").forEach((old) => {
+      const html = this.slotHtml(pv, old.dataset.slot);
+      if (old._src === html) return;
+      const tpl = document.createElement("template");
+      tpl.innerHTML = html.trim();
+      const nu = tpl.content.firstElementChild, segs = old.querySelector(".msegs"), nsegs = nu.querySelector(".msegs");
+      segs.style.setProperty("--k", nsegs.style.getPropertyValue("--k"));
+      segs.querySelectorAll(".mseg").forEach((b, i) => { const n = nsegs.children[i]; b.className = n.className; b.disabled = n.disabled; b.setAttribute("aria-checked", n.getAttribute("aria-checked")); });
+      nu.replaceChild(segs, nsegs);
+      if (old.querySelector(".slot-body") && nu.querySelector(".slot-body") && old.dataset.mode === pv.profile.schedule[old.dataset.slot].mode) nu.querySelector(".slot-body").style.animation = "none";
+      nu.dataset.mode = pv.profile.schedule[old.dataset.slot].mode;
+      old.replaceWith(nu);
+      this.bindSlot(nu, pv, admin);
+    });
+  }
   bindProfile(root, pv, admin) {
     const p = pv.profile;
     const save = (ch, rerender) => this.saveProfile(pv, ch, admin).then(() => { if (rerender) this.rerenderProfile(pv, admin); });
@@ -1353,17 +1583,7 @@ class MHPanel extends HTMLElement {
     if (pu) bindDateMask(pu, () => {});
     root.querySelectorAll("[data-pt]").forEach((b) => b.addEventListener("click", () => { const k = b.dataset.pt; save({ [k]: !p[k] }, true); }));
     root.querySelectorAll("[data-mod]").forEach((b) => b.addEventListener("click", () => { const m = b.dataset.mod; b.classList.toggle("on"); save({ modules: { [m]: !p.modules[m] } }, true); }));
-    root.querySelectorAll("[data-mode]").forEach((g) => g.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
-      const slot = g.dataset.mode; save({ schedule: { [slot]: Object.assign({}, p.schedule[slot], { mode: b.dataset.v }) } }, true);
-    })));
-    root.querySelectorAll("[data-time]").forEach((inp) => inp.addEventListener("change", () => {
-      const slot = inp.dataset.time, times = p.schedule[slot].times.slice(); times[parseInt(inp.dataset.i, 10)] = inp.value;
-      save({ schedule: { [slot]: Object.assign({}, p.schedule[slot], { times }) } });
-    }));
-    root.querySelectorAll("[data-sent]").forEach((inp) => inp.addEventListener("change", () => { const s = inp.dataset.sent; save({ schedule: { [s]: Object.assign({}, p.schedule[s], { entity: inp.value }) } }); }));
-    root.querySelectorAll("[data-soff]").forEach((inp) => inp.addEventListener("change", () => { const s = inp.dataset.soff; save({ schedule: { [s]: Object.assign({}, p.schedule[s], { offset_min: parseInt(inp.value, 10) || 0 }) } }); }));
-    const gap = root.querySelector("[data-gap]");
-    if (gap) gap.addEventListener("change", () => save({ schedule: { sleep_gap_min: parseInt(gap.value, 10) } }));
+    root.querySelectorAll(".slot").forEach((el) => { el.dataset.mode = p.schedule[el.dataset.slot].mode; this.bindSlot(el, pv, admin); });
     const pon = root.querySelector(".pauseon"), poff = root.querySelector(".pauseoff");
     if (pon) pon.addEventListener("click", async () => { const box = root.querySelector('[data-dm="pause_until"]'); const u = box ? dmValue(box) : null;
       if (u === undefined) { shake(box); return; } await this.call("pause", Object.assign({ on: true, until: u }, admin ? { pid: p.id } : {}), admin); this.rerenderProfile(pv, admin, true); });
@@ -1672,7 +1892,7 @@ class MHPanel extends HTMLElement {
       <div class="cwiz"></div>`, "wide");
     if (a.requests.length) sec(`<h3>📨 ${esc(L("a_requests"))}</h3>${a.requests.map((r) => `<div class="kv"><div>${esc(r.name)}<div class="why">${esc(fmtDate(new Date(r.ts * 1000).toISOString(), lang, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}</div></div><button class="ghost" data-dismiss="${esc(r.user_id)}">${esc(L("dismiss"))}</button></div>`).join("")}`);
     // Einstellungen
-    const timeIn = (k) => `<div class="kv"><span>${esc(L("st_" + k))}</span><input type="time" data-st="${k}" value="${esc(s[k])}" style="max-width:130px"></div>`;
+    const timeIn = (k) => `<div class="kv"><span>${esc(L("st_" + k))}</span><label class="tcell solo">${timeFieldHtml(`data-sttime="${k}" aria-label="${esc(L("st_" + k))}"`, s[k])}</label></div>`;
     const numIn = (k, key, min, max) => `<div class="kv"><span>${esc(L(key))}</span><input type="number" data-st="${k}" min="${min}" max="${max}" value="${s[k]}" style="max-width:110px"></div>`;
     sec(`<h3>⚙️ ${esc(L("a_settings"))}</h3>${timeIn("day_boundary")}${timeIn("evening_from")}${timeIn("morning_until")}${timeIn("nightly")}
       ${numIn("window_min", "st_window", 5, 1440)}${numIn("remind_min", "st_remind", 0, 240)}
@@ -1727,6 +1947,7 @@ class MHPanel extends HTMLElement {
       let v = inp.value; if (inp.type === "number") v = parseInt(v, 10); if (v === "") v = null;
       setS({ [inp.dataset.st]: v });
     }));
+    root.querySelectorAll("[data-sttime]").forEach((inp) => bindTimeField(inp, (v) => setS({ [inp.dataset.sttime]: v })));
     root.querySelectorAll("[data-load]").forEach((b) => b.addEventListener("click", async () => { await setS({ load_level: parseInt(b.dataset.load, 10) }); this.render(true); }));
     root.querySelectorAll("[data-stt]").forEach((b) => b.addEventListener("click", async () => { await setS({ [b.dataset.stt]: !s[b.dataset.stt] }); this.render(true); }));
     root.querySelectorAll("[data-atrm]").forEach((b) => b.addEventListener("click", async () => { const t = s.admin_targets.slice(); t.splice(parseInt(b.dataset.atrm, 10), 1); await setS({ admin_targets: t }); this.render(true); }));

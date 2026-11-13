@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.2 – 2026-11-14
+
+- **Fixed: the Home Assistant app on macOS crashed when a check-in time was clicked.** Times no longer use the browser's native time picker. They now use their own HH:MM field: type `2130`, `21:30` or just `7` (becomes 07:00); arrow keys move by 5 minutes (Shift: 1 hour); invalid times are rejected with a short shake. This also applies to the times in the admin settings.
+- **Check-in times redesigned**: one block each for morning and evening with a sliding mode switch (Time · Entity · Sleep · Manual) and a one-line explanation of the selected mode. Only the fields of that mode are shown.
+  - **Time**: one field for every day, "Per weekday" opens seven tiles (weekend highlighted), "Same every day" folds them back.
+  - **Sleep**: no weekday times any more; "Gap to sleep" sits right in the block (shown once, it applies to both).
+  - **Entity**: entity field plus offset.
+  - "Gap to sleep" and "Offset" use − / + buttons instead of number fields.
+- **Smoother editing**: switching modes only redraws the changed block; quick successive changes no longer overwrite each other.
+
 ## 1.1.1 – 2026-11-13
 
 - **Fixed: nothing could be added, ticked, edited or deleted on the brain dump page** ("something went wrong"). The item id was sent in a field named `id`, which Home Assistant uses for the websocket message number. It is now `item_id`. The browser test now numbers messages like Home Assistant does, and a new test forbids a command field named `id`.

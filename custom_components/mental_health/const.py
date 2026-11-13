@@ -5,7 +5,7 @@ DOMAIN = "mental_health"
 NAME = "Mental Health and Health Improvements for HAOS by Kilian K."
 SHORT_NAME = "Mental Health"
 MANUFACTURER = "Kilian K."
-VERSION = "1.1.1"
+VERSION = "1.1.2"
 
 # Plattformen (als Strings, damit die reine Logik ohne HA importierbar bleibt)
 PLATFORMS = ["sensor", "binary_sensor", "switch", "button", "select"]

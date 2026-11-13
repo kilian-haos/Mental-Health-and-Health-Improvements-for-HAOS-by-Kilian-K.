@@ -109,10 +109,10 @@ What someone may not change is shown greyed out with a short reason – never hi
 
 ### Triggers (per person, separately for morning and evening)
 
-1. **Fixed time** per weekday (default 07:30 / 21:00).
+1. **Time** – one time for every day or per weekday (default 07:30 / 21:00).
 2. **Timestamp entity** + offset (e.g. the phone's next alarm, a calendar).
-3. **Sleep based** (with a sleep source): morning ≈ *gap* after getting up, evening ≈ 1.5 × *gap* before the predicted bedtime. One setting, **gap to sleep** (default 20 min); the actual offset is fine-tuned from your answer times. Falls back to the fixed time when detection is uncertain.
-4. **Only manual / automation** (service `mental_health.start_checkin`, button entities).
+3. **Sleep** (with a sleep source): morning ≈ *gap* after getting up, evening ≈ 1.5 × *gap* before the predicted bedtime. One setting, **gap to sleep** (default 20 min); the actual offset is fine-tuned from your answer times. Falls back to the fixed time when detection is uncertain.
+4. **Manual** – only manually or from an automation (service `mental_health.start_checkin`, button entities).
 
 ## Notifications
 
