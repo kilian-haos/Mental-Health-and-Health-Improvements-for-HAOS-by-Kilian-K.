@@ -6,7 +6,7 @@
 const SELF_URL = import.meta.url;
 (() => {
 if (window.__MH) return;
-const VERSION = "1.0.2";
+const VERSION = "1.1.0";
 const DOMAIN = "mental_health";
 const PANEL = "/mental-health";
 
@@ -84,6 +84,9 @@ const I18N = {
     asleep: "asleep", in_bed: "in bed", away: "up", nap: "nap", st_asleep: "Asleep", st_in_bed: "In bed", st_away: "Up",
     st_nap: "Nap", interruptions: "{n} interruptions", latency: "fell asleep after {n} min", conf: "confidence {p} %",
     learning_hint: "Learning", min: "min", h: "h", kg: "kg",
+    dump: "Brain dump", dump_hint: "Whatever is on your mind – optional. Only what you add now is shown here.",
+    dump_ph: "New item …", dump_tick: "Tick off what's done ({n} open)", dump_none_open: "Nothing open – nice.",
+    dump_sub: "{d}/{n}", dump_added: "{n} added",
   },
   de: {
     app: "Mental Health", loading: "Lädt …", retry: "Erneut versuchen", save: "Speichern", cancel: "Abbrechen", close: "Schließen",
@@ -153,6 +156,9 @@ const I18N = {
     asleep: "schläft", in_bed: "im Bett", away: "wach", nap: "Nickerchen", st_asleep: "Schläft", st_in_bed: "Im Bett", st_away: "Wach",
     st_nap: "Nickerchen", interruptions: "{n} Unterbrechungen", latency: "nach {n} min eingeschlafen", conf: "Konfidenz {p} %",
     learning_hint: "Lernt", min: "min", h: "h", kg: "kg",
+    dump: "Brain Dump", dump_hint: "Was dir durch den Kopf geht – optional. Hier erscheint nur, was du jetzt hinzufügst.",
+    dump_ph: "Neuer Punkt …", dump_tick: "Erledigtes abhaken ({n} offen)", dump_none_open: "Nichts offen – schön.",
+    dump_sub: "{d}/{n}", dump_added: "{n} hinzugefügt",
   },
 };
 const normLang = (v) => (String(v || "").toLowerCase().split(/[-_]/)[0] === "de" ? "de" : "en");
@@ -315,7 +321,7 @@ label.lbl{ font-size:13px; color:var(--c-muted); display:block; margin:0 0 6px 2
 .slider{ position:relative; padding:6px 0 4px; }
 .slider .face{ position:absolute; top:-6px; transform:translateX(-50%); font-size:30px; transition:left .12s var(--ease); pointer-events:none; filter:drop-shadow(0 4px 10px rgba(0,0,0,.3)); }
 .slider .face.bump{ animation:mh-pop .3s var(--spring); }
-.slider input[type=range]{ -webkit-appearance:none; appearance:none; height:12px; border-radius:6px; padding:0; margin-top:34px; border:0;
+.slider input[type=range]{ -webkit-appearance:none; appearance:none; height:12px; border-radius:6px; padding:0; margin:34px 0 0; border:0; display:block;
   background:linear-gradient(90deg, #ef7b63 0%, #f5b14c 50%, #2fd6b0 100%); opacity:.55; transition:opacity .2s; }
 .slider.set input[type=range]{ opacity:1; }
 .slider input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; width:28px; height:28px; border-radius:50%; background:#fff; border:4px solid var(--c-surface); box-shadow:0 2px 10px rgba(0,0,0,.35); cursor:grab; transition:transform .16s var(--spring); }
@@ -324,7 +330,7 @@ label.lbl{ font-size:13px; color:var(--c-muted); display:block; margin:0 0 6px 2
 .slider .scale{ display:flex; justify-content:space-between; font-size:11px; color:var(--c-muted); margin-top:6px; padding:0 4px; }
 .slider .val{ position:absolute; right:0; top:4px; font-size:13px; color:var(--c-muted); }
 .kid .slider .face{ font-size:44px; top:-18px; }
-.kid .slider input[type=range]{ height:18px; margin-top:44px; }
+.kid .slider input[type=range]{ height:18px; margin:44px 0 0; }
 .kid .q{ font-size:19px; }
 .kid button{ padding:13px 20px; font-size:16px; }
 .list-in{ display:flex; gap:8px; margin-bottom:8px; }
@@ -347,6 +353,36 @@ label.lbl{ font-size:13px; color:var(--c-muted); display:block; margin:0 0 6px 2
 .tip{ position:absolute; pointer-events:none; background:var(--c-raise2); border-radius:12px; padding:7px 10px; font-size:12px; box-shadow:0 6px 18px rgba(0,0,0,.3); white-space:nowrap; transform:translate(-50%,-110%); animation:mh-fade .15s; z-index:3; }
 .confetti{ position:absolute; inset:0; pointer-events:none; overflow:hidden; }
 .confetti i{ position:absolute; top:30%; width:8px; height:12px; border-radius:2px; animation:mh-conf 1.6s var(--ease) forwards; }
+/* Brain Dump */
+.chk{ flex:0 0 auto; width:24px; height:24px; border-radius:8px; border:2px solid color-mix(in srgb, var(--c-line) 90%, transparent); background:transparent; padding:0;
+  display:grid; place-items:center; cursor:pointer; transition:background .2s var(--ease), border-color .2s, transform .16s var(--spring); }
+.chk::after{ content:""; width:10px; height:6px; border-left:2.5px solid var(--c-ink); border-bottom:2.5px solid var(--c-ink); transform:rotate(-45deg) scale(0); margin-top:-3px; transition:transform .22s var(--spring); }
+.chk.on{ background:var(--c-teal); border-color:var(--c-teal); }
+.chk.on::after{ transform:rotate(-45deg) scale(1); }
+.chk.part{ border-color:var(--c-teal); }
+.chk.part::after{ border:0; width:10px; height:2.5px; background:var(--c-teal); transform:none; margin:0; }
+.drow{ display:flex; align-items:center; gap:10px; padding:7px 4px; border-radius:12px; min-height:40px; }
+.drow .dtext{ flex:1; min-width:0; font-size:14.5px; line-height:1.35; overflow-wrap:anywhere; transition:color .2s, opacity .2s; }
+.drow.done .dtext{ color:var(--c-muted); text-decoration:line-through; text-decoration-color:color-mix(in srgb, var(--c-muted) 60%, transparent); }
+.dchev{ flex:0 0 auto; width:28px; height:28px; padding:0; border-radius:8px; background:transparent; color:var(--c-muted); display:grid; place-items:center; }
+@media (hover:hover){ .dchev:hover{ background:var(--c-raise2); color:var(--c-text); } }
+.dchev svg{ display:block; transition:transform .25s var(--ease); }
+.dchev.open svg{ transform:rotate(90deg); }
+.dchev.none{ visibility:hidden; }
+.dkids{ display:grid; grid-template-rows:0fr; transition:grid-template-rows .3s var(--ease); margin-left:22px; padding-left:10px; border-left:1.5px solid color-mix(in srgb, var(--c-line) 60%, transparent); }
+.dkids.open{ grid-template-rows:1fr; }
+.dkids > div{ overflow:hidden; min-height:0; }
+.dsub{ font-size:11px; color:var(--c-muted); background:var(--c-raise2); border-radius:999px; padding:2px 8px; flex:0 0 auto; }
+.dadd{ display:flex; gap:8px; }
+.dadd input{ flex:1; min-width:0; }
+.dadd button{ flex:0 0 auto; padding:10px 15px; font-size:17px; }
+.dnew .drow{ animation:mh-rise .3s var(--ease) both; }
+.fold{ display:flex; align-items:center; gap:8px; width:100%; justify-content:flex-start; margin-top:12px; background:var(--c-raise); border-radius:14px; padding:11px 14px; font-size:14px; }
+.fold svg{ transition:transform .25s var(--ease); color:var(--c-muted); flex:0 0 auto; }
+.fold.open svg{ transform:rotate(90deg); }
+.foldbody{ display:grid; grid-template-rows:0fr; transition:grid-template-rows .32s var(--ease); }
+.foldbody.open{ grid-template-rows:1fr; }
+.foldbody > div{ overflow:hidden; min-height:0; }
 .preview-tag{ position:absolute; top:14px; right:14px; }
 .blur-demo{ filter:saturate(.8); opacity:.85; pointer-events:none; }
 .protect{ background:linear-gradient(135deg, rgba(167,139,250,.14), rgba(47,214,176,.10)); border-radius:var(--rad-in); padding:16px; line-height:1.55; font-size:14px; }
@@ -566,6 +602,7 @@ class MHCheckin extends HTMLElement {
     }
     this.values = Object.assign({}, this.form.existing || {}, this.form.draft || {});
     this._err = {};
+    this._dump = null;
     this.render();
   }
   unlock() {
@@ -607,7 +644,7 @@ class MHCheckin extends HTMLElement {
         const q = fd.key === "mood" ? (kid ? L("f_mood_child") : L("f_mood")) : fd.key === "health" ? L("f_health") : fd.key === "sleep_quality" ? L("f_sleep_quality") : L("f_energy");
         const val = v == null ? 5.5 : v;
         return `<div class="q">${esc(q)} ${req}</div><div class="slider ${v == null ? "" : "set"}" data-slider="${fd.key}">
-          <span class="face" style="left:${((val - 1) / 9) * 100}%">${v == null ? "🫥" : moodEmoji(v, kid)}</span>
+          <span class="face" style="left:calc(14px + (100% - 28px) * ${(val - 1) / 9})">${v == null ? "🫥" : moodEmoji(v, kid)}</span>
           <span class="val">${v == null ? "" : v + "/10"}</span>
           <input type="range" min="1" max="10" step="1" value="${Math.round(val)}" aria-label="${esc(q)}">
           <div class="scale"><span>1</span><span>5</span><span>10</span></div></div>`;
@@ -668,6 +705,7 @@ class MHCheckin extends HTMLElement {
           `<button class="seg ${r[g.id] === o ? "on" : ""}" data-v="${o}">${esc(L("gr_" + o))}</button>`).join("")}</div></div>`).join("")}`;
       }
       case "sleep": return this.sleepHtml(fd, v);
+      case "dump": return this.dumpHtml(fd);
       default: return "";
     }
   }
@@ -694,6 +732,59 @@ class MHCheckin extends HTMLElement {
     }
     if (fd.key === "birthday_info") return `<div class="tile">${(o.people || []).map((p) => `<div>${esc(p.self && p.days === 0 ? L("bd_own") : p.days === 0 ? L("bd_today", { name: p.name }) : p.days === 1 ? L("bd_tomorrow", { name: p.name }) : L("bd_in", { name: p.name, n: p.days }))}</div>`).join("")}</div>`;
     return "";
+  }
+  /* Brain Dump: neue Punkte (nur die neuen sind sichtbar) + abends Abhaken im Baum */
+  dumpInit(fd) {
+    const v = this.values.dump && typeof this.values.dump === "object" ? this.values.dump : {};
+    if (!Array.isArray(v.add)) v.add = [];
+    this.values.dump = v;
+    if (!this._dump) {
+      const state = {}, orig = {};
+      const walk = (items) => items.forEach((it) => { state[it.id] = orig[it.id] = !!it.done; walk(it.children || []); });
+      walk(fd.opts.open || []);
+      // Entwurf übernehmen (bereits angehakte Punkte)
+      (v.done || []).forEach((id) => { if (id in state) state[id] = true; });
+      (v.undone || []).forEach((id) => { if (id in state) state[id] = false; });
+      this._dump = { state, orig, open: new Set(), fold: false };
+    }
+    return v;
+  }
+  dumpSync() {
+    const d = this._dump, v = this.values.dump;
+    v.done = Object.keys(d.state).filter((k) => d.state[k] && !d.orig[k]);
+    v.undone = Object.keys(d.state).filter((k) => !d.state[k] && d.orig[k]);
+    this._draft();
+  }
+  dumpTree(items, depth) {
+    const d = this._dump, L = (k, x) => this.t(k, x);
+    return items.map((it) => {
+      const kids = it.children || [];
+      const all = [];
+      const walk = (xs) => xs.forEach((x) => { all.push(x); walk(x.children || []); });
+      walk(kids);
+      const nd = all.filter((x) => d.state[x.id]).length;
+      const on = d.state[it.id], part = !on && nd > 0;
+      const open = d.open.has(it.id);
+      return `<div class="drow ${on ? "done" : ""}"><button class="dchev ${kids.length ? "" : "none"} ${open ? "open" : ""}" data-dexp="${esc(it.id)}" aria-label="${open ? "−" : "+"}"><svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M4.5 2.5 8 6l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="chk ${on ? "on" : part ? "part" : ""}" data-dchk="${esc(it.id)}" role="checkbox" aria-checked="${on}" aria-label="${esc(it.text)}"></button>
+        <span class="dtext">${esc(it.text)}</span>${kids.length ? `<span class="dsub">${esc(L("dump_sub", { d: nd, n: all.length }))}</span>` : ""}</div>
+        ${kids.length ? `<div class="dkids ${open ? "open" : ""}"><div>${this.dumpTree(kids, depth + 1)}</div></div>` : ""}`;
+    }).join("");
+  }
+  dumpHtml(fd) {
+    const L = (k, x) => this.t(k, x);
+    const v = this.dumpInit(fd);
+    const openList = fd.opts.open || [];
+    let h = `<div class="q">🧠 ${esc(L("dump"))}</div><div class="hint" style="margin:-4px 0 10px">${esc(L("dump_hint"))}</div>
+      <div class="dadd"><input class="dinput" maxlength="300" placeholder="${esc(L("dump_ph"))}" enterkeyhint="done"><button class="primary dplus" aria-label="${esc(L("add"))}">＋</button></div>
+      <div class="dnew" style="margin-top:6px">${v.add.map((a, k) => `<div class="drow ${a.done ? "done" : ""}"><button class="chk ${a.done ? "on" : ""}" data-dnew="${k}" role="checkbox" aria-checked="${!!a.done}" aria-label="${esc(a.text)}"></button>
+        <span class="dtext">${esc(a.text)}</span><button class="ghost" data-drm="${k}" aria-label="${esc(L("delete"))}" style="padding:6px 10px">✕</button></div>`).join("")}</div>`;
+    if (this.slot === "evening") {
+      const fold = this._dump.fold;
+      h += `<button class="fold ${fold ? "open" : ""}" data-dfold aria-expanded="${fold}"><svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M4.5 2.5 8 6l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>${esc(L("dump_tick", { n: openList.length }))}</span></button>
+        <div class="foldbody ${fold ? "open" : ""}"><div style="padding-top:8px">${openList.length ? this.dumpTree(openList, 1) : `<div class="hint" style="padding:6px 4px">${esc(L("dump_none_open"))}</div>`}</div></div>`;
+    }
+    return h;
   }
   sleepHtml(fd, v) {
     const L = (k, x) => this.t(k, x), o = fd.opts || {};
@@ -732,7 +823,7 @@ class MHCheckin extends HTMLElement {
         box.classList.add("set");
         const em = moodEmoji(v, this.form.child);
         if (face.textContent !== em) { face.textContent = em; face.classList.remove("bump"); void face.offsetWidth; face.classList.add("bump"); }
-        face.style.left = ((v - 1) / 9 * 100) + "%";
+        face.style.left = `calc(14px + (100% - 28px) * ${(v - 1) / 9})`;      // folgt dem Knopf, ragt nie über den Rand
         val.textContent = v + "/10";
         this.set(key, v);
         box.closest(".field").classList.remove("err");
@@ -792,9 +883,70 @@ class MHCheckin extends HTMLElement {
       if (v.action === "correct") { v.start = fd.opts.start; v.end = fd.opts.end; }
       this.set("sleep", v); this.render();
     }));
+    this.bindDump(R);
     const night = R.querySelector("[data-night]");
     if (night) this.bindNight(night);
     R.querySelector(".save").addEventListener("click", () => this.submit());
+  }
+  bindDump(R) {
+    const box = R.querySelector('.field[data-key="dump"]');
+    if (!box) return;
+    const fd = this.form.fields.find((f) => f.key === "dump");
+    const v = this.values.dump;
+    const inp = box.querySelector(".dinput");
+    const addNow = () => {
+      const lines = inp.value.split(/\n/).map((x) => x.trim()).filter(Boolean);
+      if (!lines.length) { shake(inp); return; }
+      lines.forEach((t) => v.add.push({ text: t.slice(0, 300), done: false }));
+      this._draft();
+      this.rerenderField("dump", () => { const i = this.shadowRoot.querySelector(".dinput"); if (i) i.focus(); });
+    };
+    box.querySelector(".dplus").addEventListener("click", addNow);
+    inp.addEventListener("keydown", (ev) => { if (ev.key === "Enter") { ev.preventDefault(); addNow(); } });
+    inp.addEventListener("paste", (ev) => {
+      const t = (ev.clipboardData || window.clipboardData).getData("text");
+      if (t && t.includes("\n")) { ev.preventDefault(); inp.value = t; addNow(); }
+    });
+    box.querySelectorAll("[data-dnew]").forEach((b) => b.addEventListener("click", () => {
+      const a = v.add[+b.dataset.dnew]; a.done = !a.done; this._draft(); this.rerenderField("dump");
+    }));
+    box.querySelectorAll("[data-drm]").forEach((b) => b.addEventListener("click", () => {
+      v.add.splice(+b.dataset.drm, 1); this._draft(); this.rerenderField("dump");
+    }));
+    const fold = box.querySelector("[data-dfold]");
+    if (fold) fold.addEventListener("click", () => {
+      this._dump.fold = !this._dump.fold;
+      fold.classList.toggle("open", this._dump.fold);
+      fold.setAttribute("aria-expanded", this._dump.fold);
+      fold.nextElementSibling.classList.toggle("open", this._dump.fold);
+    });
+    box.querySelectorAll("[data-dexp]").forEach((b) => b.addEventListener("click", () => {
+      const id = b.dataset.dexp, d = this._dump;
+      d.open.has(id) ? d.open.delete(id) : d.open.add(id);
+      b.classList.toggle("open", d.open.has(id));
+      const kids = b.parentElement.nextElementSibling;
+      if (kids && kids.classList.contains("dkids")) kids.classList.toggle("open", d.open.has(id));
+    }));
+    box.querySelectorAll("[data-dchk]").forEach((b) => b.addEventListener("click", () => {
+      const id = b.dataset.dchk, d = this._dump;
+      const find = (xs) => { for (const x of xs) { if (x.id === id) return x; const r = find(x.children || []); if (r) return r; } return null; };
+      const node = find(fd.opts.open || []);
+      const val = !d.state[id];
+      const setAll = (x) => { d.state[x.id] = val; (x.children || []).forEach(setAll); };
+      if (node) setAll(node);
+      this.dumpSync();
+      this.rerenderField("dump");
+    }));
+  }
+  /* Nur ein Feld neu zeichnen (keine Sprünge, Einklapp-Zustand bleibt) */
+  rerenderField(key, after) {
+    const box = this.shadowRoot.querySelector(`.field[data-key="${key}"]`);
+    const fd = this.form.fields.find((f) => f.key === key);
+    if (!box || !fd) { this.render(); return; }
+    box.classList.remove("rise");
+    box.innerHTML = this.fieldHtml(fd, this.form.child);
+    this.bindDump(this.shadowRoot);
+    if (after) after();
   }
   bindNight(night) {
     const v = this.values.sleep;
@@ -832,6 +984,7 @@ class MHCheckin extends HTMLElement {
     btn.disabled = true;
     const data = Object.assign({}, this.values);
     for (const k of ["good", "bad", "goals"]) if (Array.isArray(data[k])) data[k] = data[k].map((x) => String(x).trim()).filter(Boolean);
+    if (data.dump && !(data.dump.add || []).length && !(data.dump.done || []).length && !(data.dump.undone || []).length) delete data.dump;
     try {
       const res = await this.api.call("submit", { slot: this.slot, day: this.form.day, data }, { onLocked: () => this.unlock() });
       if (!res.ok) {

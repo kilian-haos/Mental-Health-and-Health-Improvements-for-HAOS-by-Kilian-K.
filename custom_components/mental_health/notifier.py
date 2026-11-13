@@ -45,13 +45,16 @@ def deep_link(kind: str) -> str:
 
 
 def build_payload(target: dict, platform: str, *, title: str, message: str, tag: str, url: str, persist: bool,
-                  importance: str, ios_level: str, channel: str, actions: list[dict], resend: bool = False) -> dict:
+                  importance: str, ios_level: str, channel: str, actions: list[dict], resend: bool = False,
+                  alert: bool = False) -> dict:
+    """alert=True: play a sound again although a notification with this tag is already shown (reminders).
+    Re-sends after a swipe-away stay silent (alert_once)."""
     """Service data for one target (mobile_app Android/iOS, generic notify, script)."""
     if target["kind"] == "service" and target["service"].startswith("notify.mobile_app_"):
         data: dict[str, Any] = {"tag": tag, "url": url, "clickAction": url}
         if platform == "android":
             data.update({"channel": channel, "importance": importance, "priority": "high", "ttl": 0,
-                         "sticky": "true", "alert_once": True})
+                         "sticky": "true", "alert_once": not alert})
             if persist:
                 data["persistent"] = True
             data["actions"] = [
@@ -59,6 +62,8 @@ def build_payload(target: dict, platform: str, *, title: str, message: str, tag:
                 {"action": a["action"], "title": a["title"]} for a in actions]
         else:   # iOS / macOS
             data["push"] = {"interruption-level": ios_level}
+            if alert:
+                data["push"]["sound"] = "default"
             if resend:
                 data["push"]["interruption-level"] = "passive"
             data["actions"] = [
@@ -79,7 +84,7 @@ def build_payload(target: dict, platform: str, *, title: str, message: str, tag:
     if fields.get("data"):
         d: dict[str, Any] = {"tag": tag, "url": url, "clickAction": url}
         if target.get("platform") == "android":
-            d.update({"channel": channel, "importance": importance, "sticky": "true", "alert_once": True, "ttl": 0,
+            d.update({"channel": channel, "importance": importance, "sticky": "true", "alert_once": not alert, "ttl": 0,
                       "priority": "high"})
             if persist:
                 d["persistent"] = True
@@ -158,7 +163,7 @@ class Notifier:
 
     async def send(self, pid: str, kind: str, targets: list[dict], *, title: str, message: str, persist: bool,
                    importance: str, ios_level: str, channel: str, actions_for: Callable[[int], list[dict]],
-                   only_index: int | None = None, resend: bool = False) -> int:
+                   only_index: int | None = None, resend: bool = False, alert: bool = False) -> int:
         ok = 0
         url = deep_link(kind)
         for idx, target in enumerate(targets):
@@ -167,7 +172,7 @@ class Notifier:
             platform = self.platform_of(target)
             payload = build_payload(target, platform, title=title, message=message, tag=make_tag(pid, kind, idx), url=url,
                                     persist=persist, importance=importance, ios_level=ios_level, channel=channel,
-                                    actions=actions_for(idx), resend=resend)
+                                    actions=actions_for(idx), resend=resend, alert=alert)
             if await self._call(target, payload):
                 ok += 1
         return ok

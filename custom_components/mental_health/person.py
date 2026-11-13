@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta, tzinfo
 from typing import Any
 
+from .logic import braindump as BD
 from .logic import checkin as CI
 from .logic import cycle as CY
 from .logic import training as TR
@@ -527,7 +528,14 @@ class Person:
         tcard = None
         if tst and tst.status in (TR.RECOMMENDED, TR.OVERDUE):
             tcard = {"status": tst.status, "overdue": tst.overdue_days, "child": self.child}
+        dump_open: list[dict] = []
+        if slot == "evening" and self.mod("brain_dump"):
+            try:
+                dump_open = BD.open_items(self.vault.get_dump())
+            except Locked:
+                dump_open = []
         ctx = CI.FormContext(
+            dump_open=dump_open,
             slot=slot, modules={k: self.mod(k) for k in self.modules}, child=self.child,
             has_sleep_source=bool(self.sources), sleep_detected=sleep_det,
             forecast=self.forecast(today, extra) if slot == "morning" else None, weight_card=wcard,
@@ -580,6 +588,23 @@ class Person:
             txt["goals"] = [{"id": new_id()[:8], "text": g} for g in clean["goals"]]
         if "goals_review" in clean:
             n["goal_res"] = {**(n.get("goal_res") or {}), **clean["goals_review"]}
+        if "dump" in clean:
+            d = clean["dump"]
+            items = self.vault.get_dump()
+            new = BD.add(items, [a["text"] for a in d["add"]], ts, None, [a["done"] for a in d["add"]])
+            for iid in d["done"]:
+                try:
+                    BD.set_done(items, iid, True, ts)
+                except BD.DumpError:
+                    pass
+            for iid in d["undone"]:
+                try:
+                    BD.set_done(items, iid, False, ts)
+                except BD.DumpError:
+                    pass
+            self.vault.set_dump(items)
+            info["dump_added"] = len(new)
+            info["dump_done"] = len(d["done"])
         if late:
             num["late"] = True
         old = n.get(s)
@@ -611,6 +636,14 @@ class Person:
         if slot == "evening":
             self.learn_day(day)
         return {}, info
+
+    def dump_preview(self) -> dict | None:
+        if not self.mod("brain_dump"):
+            return None
+        try:
+            return BD.preview(self.vault.get_dump())
+        except Locked:
+            return {"locked": True}
 
     def delete_entry(self, day: date, slot: str | None) -> None:
         key = day.isoformat()

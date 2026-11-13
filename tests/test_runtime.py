@@ -221,6 +221,30 @@ class Android14(Base):
         self.assertEqual([c[1] for c in self.hass.services.calls], ["mobile_app_s25"])
         self.assertTrue(self.hass.services.calls[0][2]["data"]["alert_once"])
 
+    def test_reminder_alerts_resend_silent(self):
+        self.aw(self.rt.send_checkin(self.kilian, "evening", reminder=True))
+        rem = next(c for c in self.hass.services.calls if c[1] == "mobile_app_s25")[2]["data"]
+        self.assertFalse(rem["alert_once"])                       # Erinnerung mit Ton
+        ios = next(c for c in self.hass.services.calls if c[1] == "mobile_app_ipad")[2]["data"]
+        self.assertEqual(ios["push"]["sound"], "default")
+        self.hass.services.calls.clear()
+        self.swipe(0)
+        self.assertTrue(self.hass.services.calls[0][2]["data"]["alert_once"])   # Wiederherstellen still
+
+    def test_resend_until_window_closes(self):
+        for _ in range(30):                                          # öfter als die alte Grenze (20)
+            self.rt.notifier.guard._last.clear()
+            self.swipe(0)
+        self.assertEqual(len(self.hass.services.calls), 30)
+
+    def test_later_snoozes_resend(self):
+        self.hass.bus.fire("mobile_app_notification_action", {"action": f"MH_LATER_{self.kilian.pid}_evening_0"})
+        self.swipe(0)
+        self.assertEqual(self.hass.services.calls, [])
+        H.advance(11)
+        self.swipe(0)
+        self.assertEqual(len(self.hass.services.calls), 1)
+
     def test_no_resend_for_ios(self):
         self.swipe(1)
         self.assertEqual(self.hass.services.calls, [])
@@ -362,6 +386,49 @@ class UnifiedPin(Base):
         self.assertFalse(r["ok"])
         self.assertTrue(self.rt.admin_access(ADMIN, None))                 # ohne Admin-PIN: Admins frei
         self.assertFalse(self.rt.admin_access(ANNA, None))
+
+
+class BrainDumpRuntime(Base):
+    def test_checkin_add_and_tick_off(self):
+        H.set_now(datetime(2026, 11, 11, 7, 40, tzinfo=H.TZ))
+        res = self.aw(self.rt.async_submit(self.kilian, "morning", self.rt.clock().today,
+                                           {"mood": 6, "dump": {"add": [{"text": "GEHEIM Umzug planen"}, {"text": "Steuer", "done": True}]}}))
+        self.assertTrue(res["ok"], res)
+        self.assertEqual(res["info"]["dump_added"], 2)
+        items = self.kilian.vault.get_dump()
+        self.assertEqual([i["text"] for i in items], ["GEHEIM Umzug planen", "Steuer"])
+        from custom_components.mental_health.logic import braindump as BD
+        BD.add(items, ["Kartons"], "x", items[0]["id"])
+        self.kilian.vault.set_dump(items)
+        # Abends: nur Offenes zum Abhaken, Kaskade auf Unterpunkte
+        H.set_now(datetime(2026, 11, 11, 21, 0, tzinfo=H.TZ))
+        form = self.rt.checkin_form(self.kilian, "evening")
+        fd = next(f for f in form["fields"] if f["key"] == "dump")
+        self.assertEqual([i["text"] for i in fd["opts"]["open"]], ["GEHEIM Umzug planen"])
+        top = fd["opts"]["open"][0]["id"]
+        sub = fd["opts"]["open"][0]["children"][0]["id"]
+        res = self.evening(self.kilian, dump={"add": [], "done": [top, sub, "fremd-id"]})
+        self.assertTrue(res["ok"], res)
+        items = self.kilian.vault.get_dump()
+        self.assertTrue(items[0]["done"] and items[0]["children"][0]["done"])
+        # verschlüsselt gespeichert
+        self.aw(self.rt.async_save_all())
+        self.assertNotIn("GEHEIM", json.dumps(H.STORES))
+        # Vorschau im Dashboard
+        d = self.rt.dashboard_payload(self.kilian)
+        self.assertEqual(d["dump"]["total"], 3)
+
+    def test_dump_locked_with_pin(self):
+        self.aw(self.rt.async_set_pin("u_anna", None, "4711"))
+        self.rt.lock_user("u_anna")
+        self.assertEqual(self.rt.dashboard_payload(self.anna)["dump"], {"locked": True})
+
+    def test_module_off_no_field(self):
+        self.rt.update_profile(self.kilian.pid, {"modules": {"brain_dump": False}}, self.rt.viewer(ADMIN))
+        H.set_now(datetime(2026, 11, 11, 21, 0, tzinfo=H.TZ))
+        keys = [f["key"] for f in self.rt.checkin_form(self.kilian, "evening")["fields"]]
+        self.assertNotIn("dump", keys)
+        self.assertIsNone(self.rt.dashboard_payload(self.kilian)["dump"])
 
 
 class Profile(Base):

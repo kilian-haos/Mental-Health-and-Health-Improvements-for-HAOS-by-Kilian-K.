@@ -102,7 +102,7 @@ def async_register(hass: HomeAssistant) -> None:
     for cmd in (ws_me, ws_subscribe, ws_request_setup, ws_unlock, ws_lock, ws_dashboard, ws_form, ws_submit, ws_draft,
                 ws_day, ws_delete_entry, ws_search, ws_insights, ws_family, ws_profile, ws_profile_update, ws_set_pin,
                 ws_test_notification, ws_sleep_model, ws_sleep_reset, ws_source_preview, ws_export, ws_import,
-                ws_llm, ws_pause, ws_admin, ws_admin_unlock, ws_admin_create_person, ws_admin_delete_person,
+                ws_llm, ws_pause, ws_dump, ws_dump_op, ws_admin, ws_admin_unlock, ws_admin_create_person, ws_admin_delete_person,
                 ws_admin_settings, ws_admin_set_pin, ws_admin_reset_pin, ws_backup_create, ws_backup_password,
                 ws_backup_preview, ws_backup_restore, ws_backup_download, ws_backup_delete, ws_admin_llm, ws_admin_dismiss_request):
         websocket_api.async_register_command(hass, cmd)
@@ -501,8 +501,19 @@ async def ws_export(hass: HomeAssistant, connection: Any, msg: dict) -> None:
         recs = p.records(with_texts=True)
         if msg["format"] == "json":
             return json.dumps({"app": "mental_health", "version": VERSION, "person": p.name, "days": recs,
-                               "weights": p.vault.weights, "export_format": 1}, ensure_ascii=False, indent=1)
+                               "weights": p.vault.weights, "brain_dump": p.vault.get_dump(), "export_format": 1},
+                              ensure_ascii=False, indent=1)
         lines = [f"# Mental Health – {p.name}", ""]
+        dump = p.vault.get_dump()
+        if dump:
+            lines += ["## Brain Dump", ""]
+
+            def emit(items: list, depth: int) -> None:
+                for it in items:
+                    lines.append(f"{'  ' * depth}- [{'x' if it['done'] else ' '}] {it['text']}")
+                    emit(it["children"], depth + 1)
+            emit(dump, 0)
+            lines.append("")
         for r in reversed(recs):
             lines.append(f"## {r['day']}")
             if r.get("mood") is not None:
@@ -605,6 +616,66 @@ async def ws_llm(hass: HomeAssistant, connection: Any, msg: dict) -> None:
         connection.send_error(msg["id"], ERR_LOCKED, "Locked")
         return
     connection.send_result(msg["id"], {"ok": True, "text": text})
+
+
+# ============================================================ Brain Dump (nur die Person selbst)
+def _dump_result(p: Any) -> dict:
+    from .logic import braindump as BD
+    items = p.vault.get_dump()
+    return {"items": items, "preview": BD.preview(items)}
+
+
+@_cmd({vol.Required("type"): f"{DOMAIN}/dump"})
+@callback
+def ws_dump(hass: HomeAssistant, connection: Any, msg: dict) -> None:
+    rt, p = _own_person(hass, connection, msg)
+    if not p:
+        return
+    try:
+        connection.send_result(msg["id"], _dump_result(p))
+    except Locked:
+        connection.send_error(msg["id"], ERR_LOCKED, "Locked")
+
+
+@_cmd({vol.Required("type"): f"{DOMAIN}/dump_op",
+       vol.Required("op"): vol.In(["add", "toggle", "edit", "delete", "move", "step"]),
+       vol.Optional("id"): str, vol.Optional("parent_id"): vol.Any(str, None), vol.Optional("texts"): [str],
+       vol.Optional("text"): str, vol.Optional("done"): bool, vol.Optional("index"): int,
+       vol.Optional("direction"): vol.In(["up", "down", "indent", "outdent"])})
+@callback
+def ws_dump_op(hass: HomeAssistant, connection: Any, msg: dict) -> None:
+    from homeassistant.util import dt as dt_util
+
+    from .logic import braindump as BD
+    rt, p = _own_person(hass, connection, msg)
+    if not p:
+        return
+    now = dt_util.now().isoformat()
+    try:
+        items = p.vault.get_dump()
+        op = msg["op"]
+        if op == "add":
+            BD.add(items, msg.get("texts") or [], now, msg.get("parent_id"))
+        elif op == "toggle":
+            BD.set_done(items, msg["id"], bool(msg.get("done")), now)
+        elif op == "edit":
+            BD.edit(items, msg["id"], msg.get("text") or "")
+        elif op == "delete":
+            BD.delete(items, msg["id"])
+        elif op == "move":
+            BD.move(items, msg["id"], msg.get("parent_id"), int(msg.get("index") or 0))
+        elif op == "step":
+            BD.step(items, msg["id"], msg.get("direction") or "up")
+        p.vault.set_dump(items)
+    except Locked:
+        connection.send_error(msg["id"], ERR_LOCKED, "Locked")
+        return
+    except (BD.DumpError, KeyError) as err:
+        connection.send_error(msg["id"], getattr(err, "code", "invalid"), str(err))
+        return
+    rt.save_person(p.pid)
+    rt.mark_changed(p.pid)
+    connection.send_result(msg["id"], _dump_result(p))
 
 
 # ============================================================ Admin

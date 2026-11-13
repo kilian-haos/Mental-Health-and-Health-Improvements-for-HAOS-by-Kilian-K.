@@ -60,6 +60,40 @@ const profile = { id: "p1", person_entity: child ? "person.lena_k" : "person.kil
   targets: [{ id: "t1", kind: "service", service: "notify.mobile_app_s25", platform: "auto", name: "s25" }],
   notify: { details: false, remind: true, later: true, persist: true, importance: "high", ios_level: "time-sensitive", weekly: true }, pause: null,
   llm_child_allowed: false, llm_consent: true, pin_session_min: 30, cycle_child_allowed: false };
+let dumpItems = [
+  { id: "a", text: LANG === "de" ? "Umzug planen" : "Plan the move", done: false, created: iso(+today - 20 * DAY), done_at: null, children: [
+    { id: "a1", text: LANG === "de" ? "Kartons besorgen" : "Get boxes", done: true, created: iso(+today - 19 * DAY), done_at: null, children: [] },
+    { id: "a2", text: LANG === "de" ? "Helfer fragen" : "Ask helpers", done: false, created: iso(+today - 19 * DAY), done_at: null, children: [] },
+    { id: "a3", text: LANG === "de" ? "Ummelden" : "Re-register", done: false, created: iso(+today - 18 * DAY), done_at: null, children: [
+      { id: "a31", text: LANG === "de" ? "Termin Bürgeramt" : "Book appointment", done: false, created: iso(+today - 18 * DAY), done_at: null, children: [] }] }] },
+  { id: "b", text: LANG === "de" ? "Steuererklärung" : "Tax return", done: false, created: iso(+today - 15 * DAY), done_at: null, children: [] },
+  { id: "c", text: LANG === "de" ? "Geschenk für Anna" : "Present for Anna", done: false, created: iso(+today - 2 * DAY), done_at: null, children: [] },
+  { id: "d", text: LANG === "de" ? "Fahrrad reparieren" : "Fix the bike", done: false, created: iso(+today - 1 * DAY), done_at: null, children: [] },
+  { id: "e", text: LANG === "de" ? "Bücher zurückgeben" : "Return books", done: true, created: iso(+today - 30 * DAY), done_at: null, children: [] },
+];
+const dwalk = (xs, f, depth = 1, parent = null) => xs.forEach((x) => { f(x, xs, depth, parent); dwalk(x.children, f, depth + 1, x); });
+const dfind = (id) => { let r = null; dwalk(dumpItems, (x, xs, depth, parent) => { if (x.id === id) r = { x, xs, depth, parent }; }); return r; };
+function dumpPreview() {
+  const open = dumpItems.filter((x) => !x.done).sort((a, b) => a.created.localeCompare(b.created));
+  const brief = (x) => { const all = []; dwalk(x.children, (y) => all.push(y)); return { id: x.id, text: x.text, created: x.created, sub: all.length, sub_done: all.filter((y) => y.done).length }; };
+  let total = 0, done = 0; dwalk(dumpItems, (x) => { total++; if (x.done) done++; });
+  const oldest = open.slice(0, 2), newest = open.slice(2).reverse().slice(0, 2);
+  return { oldest: oldest.map(brief), newest: newest.map(brief), open: open.length, total, done };
+}
+let dseq = 0;
+function dumpOp(m) {
+  const now = new Date().toISOString();
+  if (m.op === "add") { const target = m.parent_id ? dfind(m.parent_id).x.children : dumpItems; (m.texts || []).forEach((t) => target.push({ id: "n" + (++dseq), text: t, done: false, created: now, done_at: null, children: [] })); }
+  if (m.op === "toggle") { const f = dfind(m.id); const set = (x) => { x.done = m.done; x.children.forEach(set); }; set(f.x); }
+  if (m.op === "edit") dfind(m.id).x.text = m.text;
+  if (m.op === "delete") { const f = dfind(m.id); f.xs.splice(f.xs.indexOf(f.x), 1); }
+  if (m.op === "step") { const f = dfind(m.id); const i = f.xs.indexOf(f.x);
+    if (m.direction === "up" && i > 0) [f.xs[i - 1], f.xs[i]] = [f.xs[i], f.xs[i - 1]];
+    if (m.direction === "down" && i < f.xs.length - 1) [f.xs[i + 1], f.xs[i]] = [f.xs[i], f.xs[i + 1]];
+    if (m.direction === "indent" && i > 0) { f.xs.splice(i, 1); f.xs[i - 1].children.push(f.x); } }
+  window.__dump = dumpItems;
+  return { items: dumpItems, preview: dumpPreview() };
+}
 const status = { morning: { state: Q.get("open") === "morning" ? "open" : "done", until: new Date(Date.now() + 40 * 60000).toISOString(), next: null },
   evening: { state: Q.get("open") === "evening" ? "open" : null, until: new Date(Date.now() + 40 * 60000).toISOString(), next: null } };
 function dashboard() {
@@ -78,7 +112,8 @@ function dashboard() {
     birthdays: [{ name: "Anna", days: 0, self: false, turning: 41 }, { name: "Lena", days: 9, self: false, turning: 11 }],
     protect: Q.get("protect") === "1", child, days: days.slice().reverse().concat([]).map((x) => x), streak: 23,
     insights: [], topics: {}, goals: [], on_this_day: [{ when: "month", day: iso(+today - 30 * DAY), mood: 8, good: ["Konzert mit dem Chor"] }],
-    jar: { day: iso(+today - 50 * DAY), text: "Sonnenuntergang am See" }, locked_analysis: false, missing: [], paused: false, pause: null };
+    jar: { day: iso(+today - 50 * DAY), text: "Sonnenuntergang am See" }, locked_analysis: false, missing: [], paused: false, pause: null,
+    dump: dumpPreview() };
 }
 const form = (slot) => ({ slot, day: TODAY, allowed: true, late: false, open: true, child,
   fields: slot === "morning" ? [
@@ -92,11 +127,13 @@ const form = (slot) => ({ slot, day: TODAY, allowed: true, late: false, open: tr
     { key: "soreness", type: "scale3", required: true },
     { key: "training_info", type: "info", required: false, opts: { status: "recommended", overdue: 0, child } },
     { key: "goals_review", type: "goals_review", required: false, opts: { goals: [{ id: "g1", text: LANG === "de" ? "Früher ins Bett" : "Go to bed earlier" }] } },
+    { key: "dump", type: "dump", required: false, opts: { open: [] } },
     { key: "birthday_info", type: "info", required: false, opts: { people: [{ name: "Anna", days: 0, self: false }] } },
   ] : [
     { key: "mood", type: "scale10", required: true }, { key: "energy", type: "scale10", required: false }, { key: "health", type: "scale10", required: false },
     { key: "good", type: "texts", required: true, opts: { min: 1, max: 3, maxlen: 200 } }, { key: "bad", type: "texts", required: true, opts: { min: 1, max: 2, maxlen: 200 } },
     { key: "goals", type: "texts", required: false, opts: { min: 0, max: 3, maxlen: 200 } }, { key: "journal", type: "text", required: false, opts: { maxlen: 4000 } },
+    { key: "dump", type: "dump", required: false, opts: { open: JSON.parse(JSON.stringify(dumpItems.filter((x) => !x.done))) } },
     { key: "trained", type: "yesno", required: true, opts: { types: ["strength", "cardio", "endurance", "mobility", "team", "other"] } },
     ...(child ? [] : [{ key: "weight", type: "number", required: false, opts: { min: 2, max: 400, step: 0.1, unit: "kg", due: "warn" } },
       { key: "period", type: "choice", required: true, opts: { options: ["no", "yes", "started", "ended"], flow: ["light", "medium", "heavy", "very_heavy"], symptoms: ["cramps", "headache", "fatigue", "mood"] } }]),
@@ -182,6 +219,8 @@ const handlers = {
   backup_password: () => ({ ok: true }), backup_create: () => ({ name: "x.mhbackup" }), backup_preview: () => ({ created: new Date().toISOString(), version: "1.0.0", format: 1, persons: [{ id: "p1", name: "Kilian", days: 140 }], size: 182000 }),
   backup_restore: () => ({ ok: true }),
   backup_delete: () => ({ ok: true, backups: [] }),
+  dump: () => ({ items: dumpItems, preview: dumpPreview() }),
+  dump_op: (m) => dumpOp(m),
 };
 const states = { "sensor.esp_32_01_master_bed_sensor": { state: "3.13" }, "notify.family": { state: "unknown" }, "script.push_an_ein_gerat": { state: "off" }, "sun.sun": { state: "above_horizon" } };
 window.hass = {

@@ -264,6 +264,7 @@ class PersonVault:
         self._w_dirty = False
         self.drafts: dict[str, str] = {}         # slot -> Token (TEK)
         self.derived_tok: str | None = None      # Textanalyse-Cache (TEK)
+        self.dump_tok: str | None = None         # Brain Dump (TEK)
         self.lost_texts = 0                      # Texte, die nach PIN-Reset nicht mehr lesbar sind
 
     # ---------------------------------------------------------- laden/speichern
@@ -286,6 +287,7 @@ class PersonVault:
                 self.weights = {}
         self.drafts = dict(data.get("draft") or {})
         self.derived_tok = data.get("derived")
+        self.dump_tok = data.get("dump")
 
     def dump(self) -> dict:
         days = {}
@@ -302,7 +304,7 @@ class PersonVault:
         if self._w_dirty or (self.weights and not self._tok_w):
             self._tok_w = encrypt_json(self.dek, self.weights)
             self._w_dirty = False
-        return {"days": days, "w": self._tok_w, "draft": self.drafts, "derived": self.derived_tok}
+        return {"days": days, "w": self._tok_w, "draft": self.drafts, "derived": self.derived_tok, "dump": self.dump_tok}
 
     # ---------------------------------------------------------- Zugriff
     @property
@@ -371,6 +373,7 @@ class PersonVault:
             self._tok_t.pop(d, None)
         self.drafts = {}
         self.derived_tok = None
+        self.dump_tok = None                    # Brain Dump war mit dem alten Textschlüssel verschlüsselt
         return len(old)
 
     def rewrap_texts(self, old_tek: bytes, new_tek: bytes) -> None:
@@ -401,6 +404,23 @@ class PersonVault:
             return decrypt_json(self.tek, tok)
         except CryptoError:
             return None
+
+    def get_dump(self) -> list[dict]:
+        """Brain dump items (requires the text key)."""
+        if self.tek is None:
+            raise Locked()
+        if not self.dump_tok:
+            return []
+        try:
+            from .logic.braindump import normalize
+            return normalize(decrypt_json(self.tek, self.dump_tok))
+        except CryptoError:
+            return []
+
+    def set_dump(self, items: list[dict]) -> None:
+        if self.tek is None:
+            raise Locked()
+        self.dump_tok = encrypt_json(self.tek, items) if items else None
 
     def set_derived(self, obj: dict) -> None:
         if self.tek is not None:

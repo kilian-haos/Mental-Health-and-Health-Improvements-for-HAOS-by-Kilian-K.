@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.1.0 – 2026-11-13
+
+- **Brain dump** (new module, on by default): a personal to-do / thought list with up to three levels.
+  - In the morning and evening check-in you can add several items at once – optional, only what you add now is shown, as a list to tick off right away.
+  - In the evening a fold-out section shows everything that is still open, to tick off what's done. Ticking an item ticks all of its sub-items; every level folds open and closed on its own with a soft animation.
+  - On "Today": the two oldest and the two newest open items (collapsed, no actions) and a link to the full page.
+  - Full page: add (also several lines at once), tick/untick, sub-items, edit, sort (up/down, indent/outdent), delete (with confirmation when sub-items are affected), show/hide done.
+  - Stored encrypted with the person's text key like the journal, protected by the personal PIN, included in the personal export and in backups. Admins never see it.
+- **Reminders reworked**: reminders play a sound again (they replaced the notification silently before); a swiped-away notification on Android comes back immediately as long as the window is open (the old limit of 20 per window is gone, loop protection 3 s); "Later (10 min)" no longer brings the notification straight back; iOS reminders play the default sound.
+- **Layout and spacing**: check-in time tiles stay inside their card on every browser, long entity names wrap, sliders and their face no longer stick out of the card, the sleep model ring is no longer cut off, larger fold-out chevrons. Checked on all pages at desktop and phone width (no horizontal overflow).
+
 ## 1.0.2 – 2026-11-12
 
 - **Fixed: Family, Profile and Admin could not be opened after entering your personal PIN.** The panel sends the PIN session with every request, but several commands did not accept it. Every command now accepts the session fields (covered by a new test).

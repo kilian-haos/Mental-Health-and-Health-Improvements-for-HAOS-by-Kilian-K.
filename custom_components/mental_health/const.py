@@ -5,7 +5,7 @@ DOMAIN = "mental_health"
 NAME = "Mental Health and Health Improvements for HAOS by Kilian K."
 SHORT_NAME = "Mental Health"
 MANUFACTURER = "Kilian K."
-VERSION = "1.0.2"
+VERSION = "1.1.0"
 
 # Plattformen (als Strings, damit die reine Logik ohne HA importierbar bleibt)
 PLATFORMS = ["sensor", "binary_sensor", "switch", "button", "select"]
@@ -37,11 +37,11 @@ PANEL_ICON = "mdi:heart-pulse"
 # ---------------------------------------------------------------- Module
 MODULES = (
     "mood", "energy", "health", "sleep_quality", "sleep_tracking", "good_bad",
-    "goals", "journal", "weight", "training", "cycle", "birthday", "suggestions", "llm",
+    "goals", "journal", "brain_dump", "weight", "training", "cycle", "birthday", "suggestions", "llm",
 )
 MODULES_DEFAULT = {
     "mood": True, "energy": True, "health": True, "sleep_quality": True, "sleep_tracking": True,
-    "good_bad": True, "goals": True, "journal": True, "weight": False, "training": True,
+    "good_bad": True, "goals": True, "journal": True, "brain_dump": True, "weight": False, "training": True,
     "cycle": False, "birthday": True, "suggestions": True, "llm": False,
 }
 MODULES_LOCKED_ON = ("mood",)            # Pflichtkern
@@ -72,8 +72,8 @@ PIN_LOCK_S = 300
 # Benachrichtigungen
 NOTIFY_CHANNEL = "Mental Health – Check-in"
 NOTIFY_TAG = "mh_{pid}_{kind}_{idx}"
-RESEND_MIN_GAP_S = 10
-RESEND_MAX_PER_WINDOW = 20
+RESEND_MIN_GAP_S = 3          # nach Wegwischen sofort zurück (Schleifenschutz: höchstens alle 3 s)
+RESEND_MAX_PER_WINDOW = 200    # pro Fenster und Gerät – reicht für ein ganzes Antwortfenster
 
 # Live-Daten
 PUSH_INTERVAL = 0.5

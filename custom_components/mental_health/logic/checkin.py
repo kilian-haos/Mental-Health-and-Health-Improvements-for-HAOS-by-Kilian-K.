@@ -27,6 +27,7 @@ NUMBER = "number"
 SLEEP = "sleep"            # erkannte Schlafzeit bestätigen/korrigieren
 GOALS_REVIEW = "goals_review"
 INFO = "info"              # reine Anzeige (Prognose, Gewicht, Training, Geburtstag …)
+DUMP = "dump"              # Brain Dump: neue Punkte (morgens/abends), abends zusätzlich Abhaken
 
 FLOW = ("light", "medium", "heavy", "very_heavy")
 SYMPTOMS = ("cramps", "headache", "fatigue", "mood", "bloating", "back_pain", "nausea", "tender_breasts", "acne", "cravings")
@@ -64,6 +65,7 @@ class FormContext:
     goals_yesterday: list[dict] = field(default_factory=list)   # [{"id","text"}]
     birthdays: list[dict] = field(default_factory=list)
     weight_live: bool = False
+    dump_open: list[dict] = field(default_factory=list)   # offene Brain-Dump-Punkte (nur abends)
 
 
 def build_form(ctx: FormContext) -> list[Field]:
@@ -91,6 +93,8 @@ def build_form(ctx: FormContext) -> list[Field]:
             out += _period_fields()
         if m.get("goals") and ctx.goals_yesterday:
             out.append(Field("goals_review", GOALS_REVIEW, opts={"goals": ctx.goals_yesterday}))
+        if m.get("brain_dump"):
+            out.append(Field("dump", DUMP, opts={"open": []}))
         if m.get("birthday") and ctx.birthdays:
             out.append(Field("birthday_info", INFO, opts={"people": ctx.birthdays}))
         return out
@@ -107,6 +111,8 @@ def build_form(ctx: FormContext) -> list[Field]:
         out.append(Field("goals", TEXTS, False, {"min": 0, "max": 3, "maxlen": MAX_SHORT}))
     if m.get("journal"):
         out.append(Field("journal", TEXT, False, {"maxlen": MAX_TEXT}))
+    if m.get("brain_dump"):
+        out.append(Field("dump", DUMP, opts={"open": ctx.dump_open}))
     if m.get("training"):
         out.append(Field("trained", YESNO, True, {"types": list(TRAINING_TYPES)}))
         if ctx.ask_soreness:
@@ -191,6 +197,8 @@ def validate(form: list[Field], data: dict[str, Any]) -> tuple[dict[str, Any], d
             v = _sleep(raw)
         elif f.type == GOALS_REVIEW:
             v = _goals_review(raw, {g["id"] for g in f.opts.get("goals", [])})
+        elif f.type == DUMP:
+            v = _dump(raw, _tree_ids(f.opts.get("open") or []))
         else:
             v = None
         if v is None:
@@ -261,6 +269,34 @@ def _sleep(raw: Any) -> dict | None:
             return None
         out["start"], out["end"] = s.isoformat(), e.isoformat()
     return out
+
+
+def _tree_ids(items: list[dict]) -> set[str]:
+    out: set[str] = set()
+    for it in items:
+        out.add(str(it.get("id")))
+        out |= _tree_ids(it.get("children") or [])
+    return out
+
+
+def _dump(raw: Any, ids: set[str]) -> dict | None:
+    """{"add": [{"text", "done"}], "done": [ids], "undone": [ids]} – only ids that were offered."""
+    if not isinstance(raw, dict):
+        return None
+    add = []
+    for it in (raw.get("add") or [])[:50]:
+        if isinstance(it, str):
+            it = {"text": it}
+        if not isinstance(it, dict):
+            continue
+        t = " ".join(str(it.get("text") or "").split())[:300]
+        if t:
+            add.append({"text": t, "done": bool(it.get("done"))})
+    done = [str(i) for i in (raw.get("done") or []) if str(i) in ids][:500]
+    undone = [str(i) for i in (raw.get("undone") or []) if str(i) in ids and str(i) not in done][:500]
+    if not add and not done and not undone:
+        return None
+    return {"add": add, "done": done, "undone": undone}
 
 
 def _goals_review(raw: Any, ids: set[str]) -> dict | None:

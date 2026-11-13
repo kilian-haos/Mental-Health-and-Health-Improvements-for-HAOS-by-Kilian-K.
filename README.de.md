@@ -22,6 +22,7 @@ Läuft auf **jeder Home-Assistant-Installationsart** (Home Assistant OS, Contain
 - **Health Score** pro Person und für die Familie, transparente Komponenten, Trend.
 - **Insights** – Stimmungsverlauf (morgens/abends, Prognose vs. tatsächlich), Year in Pixels, Wochentage, Verteilung, Schlaf-Zeitleiste, Dauer ggü. Optimum, Gewichtstrend mit gesundem Bereich, Trainingsrhythmus, Zyklus, Zusammenhänge (Schlaf ↔ Stimmung, Training ↔ Energie), „Was dir gut tut / Was dich runterzieht“, Ziele-Tracker, Wochenrückblick und Monatsbericht, „Heute vor …“, Glücksglas.
 - **Lokale KI-Suche** in eigenen Worten: *„schlechte Tage letzten Monat mit Training“*, *„gute Tage im Sommer“*, *„Wald“* – ein Regel-Parser macht daraus Filter-Chips, dazu Volltextsuche (BM25) mit Stammformen und Synonymen, Deutsch und Englisch.
+- **Brain Dump** – eine To-do- und Gedankenliste mit bis zu drei Ebenen: Punkte im Morgen- und Abend-Check-in hinzufügen, abends Erledigtes abhaken (ein Haken gilt für alle Unterpunkte), die zwei ältesten und neuesten offenen Punkte auf „Heute“ und eine eigene Seite zum Sortieren, Bearbeiten und Löschen. Verschlüsselt wie das Journal.
 - **Trainingsrhythmus** – zwei Ruhetage, Muskelkater-Abfrage, „Heute ist ein guter Tag für ein Training 💪“, hervorgehoben, wenn überfällig.
 - **Gewicht** mit geglättetem Trend, Wochenschnitt und gesundem Optimum aus deiner Größe – mit verbindlichen Sicherheitsregeln (Abnehmen unter den gesunden Bereich wird nie gelobt, Kinder bekommen gar keine Wertung).
 - **Zyklus** – Periode dokumentieren, gelernte Prognose (optional verfeinert über die Basaltemperatur), für Admins nur drei Sensoren sichtbar.
@@ -98,6 +99,7 @@ Was jemand nicht ändern darf, ist ausgegraut mit kurzem Grund – nie versteckt
 ## Check-ins
 
 - **Morgens**: Begrüßung mit Stimmungsprognose, deine Nacht (bestätigen / per Ziehen korrigieren), Sleepmaxing, Gewichtshinweis, Stimmung (Pflicht), Energie, Schlafqualität, Gesundheitsgefühl, Muskelkater (wenn relevant), Trainingsempfehlung, Periode, Vorsätze von gestern, Geburtstage.
+- **Brain Dump** (beide): neue Punkte hinzufügen (optional); abends zusätzlich eine aufklappbare Liste zum Abhaken offener Punkte.
 - **Abends**: Stimmung (Pflicht), Energie, Gesundheitsgefühl, 1–3 gute Dinge (mind. 1), 1–2 nicht so gute (mind. 1), Vorsätze, Journal, Training ja/nein (Pflicht), Gewicht (optional; nach 15 Tagen ohne Wert einmalig Pflicht – nie bei Kindern), Periode.
 - Der **Abend-Eintrag geht ab 14:00** (einstellbar) jederzeit über das Dashboard, der Morgen-Eintrag bis 14:00. Ein manueller Eintrag schließt eine offene Abfrage und entfernt ihre Benachrichtigung.
 - **Antwortfenster** standardmäßig 60 min, danach „verpasst“; Nachtragen ist standardmäßig bis Tagesende erlaubt (markiert „nachgetragen“). Einträge lassen sich später bearbeiten und löschen; Statistik und Modelle rechnen nach.
@@ -114,7 +116,7 @@ Was jemand nicht ändern darf, ist ausgegraut mit kurzem Grund – nie versteckt
 
 ## Benachrichtigungen
 
-Jedes Gerät wird einzeln benachrichtigt – ein defektes Ziel blockiert die anderen nicht. Die Meldung öffnet `/mental-health?checkin=morning|evening`, dazu die Aktion „Jetzt eintragen“ und optional „Später (10 min)“. **Keine Texteingabe in Benachrichtigungen** (Antworten liefen über den Event-Bus und den Recorder).
+Jedes Gerät wird einzeln benachrichtigt – ein defektes Ziel blockiert die anderen nicht. Erinnerungen (Standard alle 15 min) kommen mit Ton, bis der Check-in erledigt oder das Fenster vorbei ist; auf Android kommt eine weggewischte Meldung sofort zurück, solange das Fenster offen ist. Die Meldung öffnet `/mental-health?checkin=morning|evening`, dazu die Aktion „Jetzt eintragen“ und optional „Später (10 min)“. **Keine Texteingabe in Benachrichtigungen** (Antworten liefen über den Event-Bus und den Recorder).
 
 ### Persistente Benachrichtigungen auf Android 14+
 

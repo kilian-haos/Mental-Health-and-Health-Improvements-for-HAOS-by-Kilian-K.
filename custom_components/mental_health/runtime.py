@@ -977,7 +977,8 @@ class MHRuntime:
         return await self.notifier.send(
             p.pid, slot, p.profile["targets"], title=title, message=msg, persist=bool(nt.get("persist")),
             importance=nt.get("importance") or "high", ios_level=nt.get("ios_level") or "time-sensitive",
-            channel=self.t("n_channel"), actions_for=actions, only_index=only_index, resend=resend)
+            channel=self.t("n_channel"), actions_for=actions, only_index=only_index, resend=resend,
+            alert=not resend)          # erste Meldung + Erinnerungen mit Ton, Wiederherstellen still
 
     async def send_test(self, p: Person) -> int:
         return await self.notifier.send(
@@ -997,6 +998,9 @@ class MHRuntime:
             return
         if not self.window_open(pid, slot):
             return
+        cur = self._status(pid).get(slot) or {}
+        if cur.get("snooze_until") and self.clock().now < cur["snooze_until"]:
+            return                      # „Später (10 min)“ gedrückt – nicht sofort wiederholen
         if idx >= len(p.profile["targets"]) or self._platform_of(p.profile["targets"][idx]) != "android":
             return
         tag = f"mh_{pid}_{slot}_{idx}"
@@ -1016,9 +1020,13 @@ class MHRuntime:
         cur = self._status(pid).get(slot)
         if cur:
             cur["next_remind"] = self.clock().now + timedelta(minutes=10)
+            cur["snooze_until"] = self.clock().now + timedelta(minutes=10)
             cur["until"] = max(cur["until"], self.clock().now + timedelta(minutes=15))
 
         async def later(_now: Any) -> None:
+            c = self._status(pid).get(slot)
+            if c:
+                c.pop("snooze_until", None)
             if self.window_open(pid, slot):
                 await self.send_checkin(p, slot, only_index=idx)
         async_call_later(self.hass, 600, later)
@@ -1471,6 +1479,7 @@ class MHRuntime:
             "goals": derived.get("goals") or [], "on_this_day": derived.get("on_this_day") or [],
             "jar": derived.get("jar"), "locked_analysis": p.vault.tek is None,
             "missing": p.missing_profile(), "paused": p.paused_on(today), "pause": p.profile.get("pause"),
+            "dump": p.dump_preview(),
         }
 
     def family_payload(self, viewer: PM.Viewer) -> dict:

@@ -15,6 +15,11 @@ Object.assign(M.I18N.en, {
   admin_in: "Signed in as admin for this session", admin_in_short: "Admin", admin_in_hint: "Admin rights via the admin PIN – only for this session.",
   admin_end: "End admin", enter_code: "Enter code", lock_now: "Lock now", locked_now: "Locked",
   s_pick_entity: "Choose an entity above – the last 48 h appear here with the model's detection.",
+  dump_open_n: "{n} open", dump_done_n: "{n} done", dump_oldest: "Oldest", dump_newest: "Newest", dump_all: "Show all",
+  dump_empty: "Still empty – add something in the check-in or here.", dump_page_hint: "Tap ⋯ for sub-items, editing, sorting and deleting. Ticking an item ticks all of its sub-items.",
+  dump_actions: "Actions", dump_subitem: "Sub-item", dump_up: "Up", dump_down: "Down", dump_indent: "Indent (under the item above)",
+  dump_outdent: "Outdent", dump_show_done: "Show done", dump_hide_done: "Hide done", dump_too_deep: "At most three levels.",
+  dump_delete_confirm: "Delete this item including all of its sub-items?", m_brain_dump: "Brain dump",
   tab_today: "Today", tab_insights: "Insights", tab_history: "History", tab_family: "Family", tab_profile: "Profile", tab_admin: "Admin",
   guide: "Guide", guide_title: "How it works",
   g_1: "<b>Check-in</b>: morning and evening, under a minute. Mandatory fields are marked with a dot.",
@@ -131,6 +136,11 @@ Object.assign(M.I18N.de, {
   admin_in: "Für diese Sitzung als Admin angemeldet", admin_in_short: "Als Admin drin", admin_in_hint: "Admin-Rechte über die Admin-PIN – nur für diese Sitzung.",
   admin_end: "Admin beenden", enter_code: "Code eingeben", lock_now: "Jetzt sperren", locked_now: "Gesperrt",
   s_pick_entity: "Wähle oben eine Entität – hier erscheinen dann die letzten 48 h mit der Erkennung des Modells.",
+  dump_open_n: "{n} offen", dump_done_n: "{n} erledigt", dump_oldest: "Älteste", dump_newest: "Neueste", dump_all: "Alle anzeigen",
+  dump_empty: "Noch leer – füge im Check-in oder hier etwas hinzu.", dump_page_hint: "Tippe auf ⋯ für Unterpunkte, Bearbeiten, Sortieren und Löschen. Ein Haken gilt für alle Unterpunkte.",
+  dump_actions: "Aktionen", dump_subitem: "Unterpunkt", dump_up: "Nach oben", dump_down: "Nach unten", dump_indent: "Einrücken (unter den Punkt darüber)",
+  dump_outdent: "Ausrücken", dump_show_done: "Erledigte zeigen", dump_hide_done: "Erledigte ausblenden", dump_too_deep: "Höchstens drei Ebenen.",
+  dump_delete_confirm: "Diesen Punkt samt allen Unterpunkten löschen?", m_brain_dump: "Brain Dump",
   tab_today: "Heute", tab_insights: "Insights", tab_history: "Verlauf", tab_family: "Familie", tab_profile: "Profil", tab_admin: "Admin",
   guide: "Anleitung", guide_title: "So funktioniert's",
   g_1: "<b>Check-in</b>: morgens und abends, unter einer Minute. Pflichtfelder haben einen Punkt.",
@@ -264,6 +274,8 @@ const PCSS = `
 .sec h4{ margin:16px 0 8px; font-size:13px; color:var(--c-muted); font-weight:600; text-transform:uppercase; letter-spacing:.6px; }
 .kv{ display:flex; justify-content:space-between; gap:12px; padding:9px 0; border-bottom:1px solid rgba(255,255,255,.04); font-size:14px; align-items:center; }
 .kv:last-child{ border-bottom:0; }
+.kv > :first-child{ min-width:0; overflow-wrap:anywhere; }
+.kv > :last-child{ flex:0 0 auto; }
 .kv .why{ font-size:11.5px; color:var(--c-muted); }
 .locked-field{ opacity:.55; }
 .toggle{ position:relative; width:44px; height:26px; border-radius:13px; background:var(--c-raise2); flex:0 0 auto; transition:background .2s var(--ease); cursor:pointer; border:0; padding:0; }
@@ -303,7 +315,7 @@ const PCSS = `
 .entry ul{ margin:6px 0 0; padding-left:18px; }
 .entry li{ margin:3px 0; font-size:14px; }
 .journal{ white-space:pre-wrap; line-height:1.55; font-size:14px; margin-top:8px; }
-canvas.model{ width:100%; height:240px; display:block; border-radius:var(--rad-in); background:var(--c-bg); }
+canvas.model{ width:100%; height:280px; display:block; border-radius:var(--rad-in); background:var(--c-bg); }
 .graph{ position:relative; }
 .graph svg{ width:100%; height:180px; display:block; touch-action:none; }
 .thr{ cursor:ns-resize; }
@@ -315,9 +327,10 @@ canvas.model{ width:100%; height:240px; display:block; border-radius:var(--rad-i
 .steps i{ flex:1; height:4px; border-radius:2px; background:var(--c-raise2); transition:background .3s; }
 .steps i.on{ background:var(--c-teal); }
 .wd-times{ display:grid; grid-template-columns:repeat(auto-fill,minmax(104px,1fr)); gap:8px; }
-.wd-times .wd{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+.wd-times .wd{ display:flex; flex-direction:column; gap:4px; min-width:0; overflow:hidden; }
 .wd-times .wd span{ font-size:11px; color:var(--c-muted); padding-left:4px; }
-.wd-times input{ padding:8px 8px 8px 10px; font-size:14px; min-width:0; font-variant-numeric:tabular-nums; }
+.wd-times input{ display:block; width:100%; max-width:100%; min-width:0; padding:8px 8px 8px 10px; font-size:14px; font-variant-numeric:tabular-nums; }
+.wd-times input::-webkit-date-and-time-value{ text-align:left; }
 .wd-times input::-webkit-calendar-picker-indicator{ opacity:.55; margin-left:2px; cursor:pointer; }
 .modes{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
 .modes .chip{ padding:8px 13px; font-size:13px; }
@@ -340,6 +353,26 @@ canvas.model{ width:100%; height:240px; display:block; border-radius:var(--rad-i
 .dmask.err input{ border-color:var(--c-red); }
 .dmask[aria-disabled="true"]{ opacity:.55; pointer-events:none; }
 .dm-clear{ padding:6px 10px; font-size:13px; flex:0 0 auto; }
+.dprev{ display:flex; align-items:center; gap:10px; padding:8px 2px; border-bottom:1px solid color-mix(in srgb, var(--c-line) 35%, transparent); }
+.dprev:last-child{ border-bottom:0; }
+.dprev .dot{ width:8px; height:8px; border-radius:50%; background:var(--c-teal); flex:0 0 auto; opacity:.8; }
+.dprev .dot.old{ background:var(--c-amber); }
+.dprev .t{ flex:1; min-width:0; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dprev .when{ font-size:11px; color:var(--c-muted); flex:0 0 auto; }
+.dgrp{ font-size:11px; letter-spacing:.6px; text-transform:uppercase; color:var(--c-muted); margin:10px 0 2px; }
+.dtree{ margin-top:12px; }
+.dnode > .drow{ transition:background .2s var(--ease); }
+@media (hover:hover){ .dnode > .drow:hover{ background:var(--c-raise); } }
+.dnode.sel > .drow{ background:var(--c-raise); }
+.dmore{ flex:0 0 auto; padding:6px 10px; font-size:16px; background:transparent; color:var(--c-muted); }
+.dacts{ display:grid; grid-template-rows:0fr; transition:grid-template-rows .25s var(--ease); }
+.dacts.open{ grid-template-rows:1fr; }
+.dacts > div{ overflow:hidden; min-height:0; }
+.dacts .bar{ display:flex; flex-wrap:wrap; gap:6px; padding:6px 0 10px 62px; }
+.dacts .bar button{ padding:7px 12px; font-size:13px; }
+.dedit{ flex:1; min-width:0; padding:7px 10px; font-size:14.5px; }
+.dsubadd{ display:flex; gap:8px; padding:4px 0 10px 62px; }
+.dsubadd input{ flex:1; min-width:0; padding:8px 12px; font-size:14px; }
 .lock{ display:grid; place-items:center; min-height:60vh; text-align:center; gap:14px; }
 .dialog > div:first-child{ white-space:pre-line; }
 .note{ font-size:11.5px; color:var(--c-muted); text-align:center; margin-top:18px; }
@@ -496,7 +529,7 @@ function bindDateMask(box, onChange) {
 const TAB_ICONS = { today: "☀️", insights: "✨", history: "🗓️", family: "🏡", profile: "👤", admin: "🛠️" };
 const KINDS = ["binary", "numeric", "enum", "probability", "aux"];
 const AUX_ROLES = ["screen", "charging", "light", "away_motion", "room", "home"];
-const MODULE_KEYS = ["mood", "energy", "health", "sleep_quality", "sleep_tracking", "good_bad", "goals", "journal", "weight", "training", "cycle", "birthday", "suggestions", "llm"];
+const MODULE_KEYS = ["mood", "energy", "health", "sleep_quality", "sleep_tracking", "good_bad", "goals", "journal", "brain_dump", "weight", "training", "cycle", "birthday", "suggestions", "llm"];
 
 class MHPanel extends HTMLElement {
   constructor() {
@@ -532,6 +565,7 @@ class MHPanel extends HTMLElement {
     if (!this._me.setup && this.tab !== "admin") this.tab = "today";
     this._subscribe();
     await this.render();
+    if (q.get("view") === "dump" && this._me.setup) { this.sub = "dump"; this.render(true); }
     const ci = q.get("checkin");
     if (ci && this._me.setup && (ci === "morning" || ci === "evening")) this.openCheckin(ci);
   }
@@ -600,7 +634,7 @@ class MHPanel extends HTMLElement {
     }
     const main = this.shadowRoot.querySelector(".main");
     try {
-      const html = await this["tab_" + this.tab](quiet);
+      const html = this.sub === "dump" ? await this.page_dump() : await this["tab_" + this.tab](quiet);
       if (html != null) { main.innerHTML = html; this.afterRender(main); }
     } catch (e) {
       if (e && e.code === "locked") {
@@ -621,7 +655,7 @@ class MHPanel extends HTMLElement {
   bindShell() {
     const R = this.shadowRoot;
     R.querySelectorAll("[data-tab]").forEach((b) => b.addEventListener("click", () => {
-      this.tab = b.dataset.tab; lsSet("mh_tab", this.tab);
+      this.tab = b.dataset.tab; lsSet("mh_tab", this.tab); this.sub = null;
       R.querySelectorAll("[data-tab]").forEach((x) => x.classList.toggle("on", x.dataset.tab === this.tab));
       this.render(true);
     }));
@@ -645,7 +679,8 @@ class MHPanel extends HTMLElement {
   }
   onAct(act, el) {
     if (act === "checkin") return this.openCheckin(el.dataset.slot, el.dataset.day);
-    if (act === "tab") { this.tab = el.dataset.v; lsSet("mh_tab", this.tab); return this.render(); }
+    if (act === "tab") { this.tab = el.dataset.v; lsSet("mh_tab", this.tab); this.sub = null; return this.render(); }
+    if (act === "dump") { this.sub = "dump"; this.render(true); this.shadowRoot.querySelector(".main").scrollIntoView({ block: "start" }); return; }
   }
 
   /* ---------------------------------------------------------- Check-in als Sheet */
@@ -755,8 +790,160 @@ class MHPanel extends HTMLElement {
       const can = this._me.rights && this._me.rights.profile_edit && this._me.rights.profile_edit.ok;
       out.push(`<div class="wide hint" style="padding:0 6px">${esc(L("p_missing", { what: d.missing.map((m) => L("mf_" + m)).join(", ") }))} ${can ? `<a href="#" data-act="tab" data-v="profile" style="color:var(--c-teal)">→ ${esc(L("tab_profile"))}</a>` : esc(L("p_missing_admin"))}</div>`);
     }
+    if (d.dump) {
+      const dp = d.dump;
+      const row = (it, old) => `<div class="dprev"><span class="dot ${old ? "old" : ""}"></span><span class="t">${esc(it.text)}</span>
+        ${it.sub ? `<span class="dsub">${esc(L("dump_sub", { d: it.sub_done, n: it.sub }))}</span>` : ""}<span class="when">${esc(fmtDate(it.created, lang, { day: "numeric", month: "short" }))}</span></div>`;
+      sec(`<h3>🧠 ${esc(L("dump"))} ${dp.locked ? "" : `<span class="chip small ${dp.open ? "teal" : ""}">${esc(L("dump_open_n", { n: dp.open }))}</span>`}</h3>
+        ${dp.locked ? `<div class="hint">🔒 ${esc(L("insights_locked"))}</div>`
+          : !dp.total ? `<div class="hint">${esc(L("dump_empty"))}</div>`
+          : `${dp.oldest.length ? `<div class="dgrp">${esc(L("dump_oldest"))}</div>${dp.oldest.map((it) => row(it, true)).join("")}` : ""}
+             ${dp.newest.length ? `<div class="dgrp">${esc(L("dump_newest"))}</div>${dp.newest.map((it) => row(it, false)).join("")}` : ""}
+             ${!dp.open ? `<div class="hint">${esc(L("dump_none_open"))}</div>` : ""}`}
+        <div class="row" style="margin-top:12px;justify-content:flex-end"><button data-act="dump">${esc(L("dump_all"))} ›</button></div>`);
+    }
     out.push(`<div class="wide note">${esc(L("not_medical"))}</div>`);
     return out.join("");
+  }
+
+  /* ---------------------------------------------------------- Brain Dump (Unterseite) */
+  async page_dump() {
+    this._dumpData = await this.call("dump", {});
+    this._dumpShowDone = lsGet("mh_dump_done", false);
+    this._dumpOpen = new Set(lsGet("mh_dump_open", []));
+    this._bind = (root) => this.bindDumpPage(root);
+    return `<section class="sec wide rise dumppage">${this.dumpPageHtml()}</section>`;
+  }
+  dumpPageHtml() {
+    const L = (k, v) => this.t(k, v);
+    const dd = this._dumpData, pv = dd.preview;
+    const filt = (xs) => xs.filter((x) => this._dumpShowDone || !x.done);
+    const node = (it, depth) => {
+      const kidsAll = it.children || [];
+      const kids = filt(kidsAll);
+      const all = [];
+      const walk = (xs) => xs.forEach((x) => { all.push(x); walk(x.children || []); });
+      walk(kidsAll);
+      const nd = all.filter((x) => x.done).length;
+      const open = this._dumpOpen.has(it.id);
+      const sel = this._dumpMenu === it.id;
+      const editing = this._dumpEdit === it.id;
+      return `<div class="dnode ${sel ? "sel" : ""}" data-node="${esc(it.id)}"><div class="drow ${it.done ? "done" : ""}">
+          <button class="dchev ${kids.length ? "" : "none"} ${open ? "open" : ""}" data-pexp="${esc(it.id)}" aria-label="${open ? "−" : "+"}"><svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M4.5 2.5 8 6l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <button class="chk ${it.done ? "on" : nd ? "part" : ""}" data-pchk="${esc(it.id)}" role="checkbox" aria-checked="${!!it.done}" aria-label="${esc(it.text)}"></button>
+          ${editing ? `<input class="dedit" data-pedit="${esc(it.id)}" value="${esc(it.text)}" maxlength="300">` : `<span class="dtext">${esc(it.text)}</span>`}
+          ${all.length ? `<span class="dsub">${esc(L("dump_sub", { d: nd, n: all.length }))}</span>` : ""}
+          <button class="dmore" data-pmenu="${esc(it.id)}" aria-label="${esc(L("dump_actions"))}" aria-expanded="${sel}">⋯</button></div>
+        <div class="dacts ${sel ? "open" : ""}"><div><div class="bar">
+          ${depth < 3 ? `<button data-pop="addsub" data-id="${esc(it.id)}">＋ ${esc(L("dump_subitem"))}</button>` : ""}
+          <button data-pop="edit" data-id="${esc(it.id)}">✎ ${esc(L("edit"))}</button>
+          <button data-pop="up" data-id="${esc(it.id)}" aria-label="${esc(L("dump_up"))}">↑</button>
+          <button data-pop="down" data-id="${esc(it.id)}" aria-label="${esc(L("dump_down"))}">↓</button>
+          <button data-pop="indent" data-id="${esc(it.id)}" title="${esc(L("dump_indent"))}">⇥</button>
+          ${depth > 1 ? `<button data-pop="outdent" data-id="${esc(it.id)}" title="${esc(L("dump_outdent"))}">⇤</button>` : ""}
+          <button class="danger" data-pop="delete" data-id="${esc(it.id)}">🗑 ${esc(L("delete"))}</button></div>
+          ${this._dumpAddTo === it.id ? `<div class="dsubadd"><input class="psubin" placeholder="${esc(L("dump_ph"))}" maxlength="300"><button class="primary psubok" data-id="${esc(it.id)}">＋</button></div>` : ""}</div></div>
+        ${kids.length ? `<div class="dkids ${open ? "open" : ""}"><div>${kids.map((k) => node(k, depth + 1)).join("")}</div></div>` : ""}</div>`;
+    };
+    const top = filt(dd.items);
+    return `<div class="row" style="flex-wrap:wrap;gap:10px"><button class="ghost dback">‹ ${esc(L("tab_today"))}</button><h3 style="margin:0">🧠 ${esc(L("dump"))}</h3>
+        <span class="spacer"></span><span class="chip small teal">${esc(L("dump_open_n", { n: pv.open }))}</span><span class="chip small">${esc(L("dump_done_n", { n: pv.done }))}</span>
+        <button class="ghost dshowdone ${this._dumpShowDone ? "on" : ""}">${esc(L(this._dumpShowDone ? "dump_hide_done" : "dump_show_done"))}</button></div>
+      <div class="dadd" style="margin-top:14px"><input class="pdin" placeholder="${esc(L("dump_ph"))}" maxlength="300" enterkeyhint="done"><button class="primary pdplus" aria-label="${esc(L("add"))}">＋</button></div>
+      <div class="hint" style="margin-top:6px">${esc(L("dump_page_hint"))}</div>
+      <div class="dtree">${top.length ? top.map((it) => node(it, 1)).join("") : `<div class="hint" style="padding:16px 4px">${esc(L(dd.items.length ? "dump_none_open" : "dump_empty"))}</div>`}</div>`;
+  }
+  async dumpOp(op, data) {
+    try {
+      this._dumpData = await this.call("dump_op", Object.assign({ op }, data));
+    } catch (e) {
+      toast(this.shadowRoot, e && e.code === "too_deep" ? this.t("dump_too_deep") : this.t("error"));
+      return;
+    }
+    this.redrawDump();
+  }
+  redrawDump(focusSel) {
+    const box = this.shadowRoot.querySelector(".dumppage");
+    if (!box) return;
+    box.classList.remove("rise");
+    box.innerHTML = this.dumpPageHtml();
+    this.bindDumpPage(box.parentElement);
+    if (focusSel) { const el = box.querySelector(focusSel); if (el) { el.focus(); if (el.select && focusSel === ".dedit") el.select(); } }
+  }
+  bindDumpPage(root) {
+    const L = (k) => this.t(k);
+    const box = root.querySelector(".dumppage");
+    if (!box) return;
+    const q = (x) => box.querySelector(x);
+    q(".dback").addEventListener("click", () => { this.sub = null; this.render(true); });
+    q(".dshowdone").addEventListener("click", () => { this._dumpShowDone = !this._dumpShowDone; lsSet("mh_dump_done", this._dumpShowDone); this.redrawDump(); });
+    const addTop = async () => {
+      const inp = q(".pdin");
+      const texts = inp.value.split(/\n/).map((x) => x.trim()).filter(Boolean);
+      if (!texts.length) { shake(inp); return; }
+      await this.dumpOp("add", { texts });
+      this.redrawDump(".pdin");
+    };
+    q(".pdplus").addEventListener("click", addTop);
+    q(".pdin").addEventListener("keydown", (ev) => { if (ev.key === "Enter") { ev.preventDefault(); addTop(); } });
+    q(".pdin").addEventListener("paste", (ev) => {
+      const t = (ev.clipboardData || window.clipboardData).getData("text");
+      if (t && t.includes("\n")) { ev.preventDefault(); q(".pdin").value = t; addTop(); }
+    });
+    box.querySelectorAll("[data-pexp]").forEach((b) => b.addEventListener("click", () => {
+      const id = b.dataset.pexp;
+      this._dumpOpen.has(id) ? this._dumpOpen.delete(id) : this._dumpOpen.add(id);
+      lsSet("mh_dump_open", [...this._dumpOpen]);
+      b.classList.toggle("open", this._dumpOpen.has(id));
+      const kids = b.closest(".dnode").querySelector(":scope > .dkids");
+      if (kids) kids.classList.toggle("open", this._dumpOpen.has(id));
+    }));
+    box.querySelectorAll("[data-pchk]").forEach((b) => b.addEventListener("click", () => {
+      const done = !b.classList.contains("on");
+      b.classList.toggle("on", done);
+      this.dumpOp("toggle", { id: b.dataset.pchk, done });
+    }));
+    box.querySelectorAll("[data-pmenu]").forEach((b) => b.addEventListener("click", () => {
+      const id = b.dataset.pmenu;
+      this._dumpMenu = this._dumpMenu === id ? null : id;
+      this._dumpAddTo = null;
+      box.querySelectorAll(".dnode").forEach((n) => {
+        const on = n.dataset.node === this._dumpMenu;
+        n.classList.toggle("sel", on);
+        const a = n.querySelector(":scope > .dacts"); if (a) a.classList.toggle("open", on);
+      });
+    }));
+    box.querySelectorAll("[data-pop]").forEach((b) => b.addEventListener("click", async () => {
+      const op = b.dataset.pop, id = b.dataset.id;
+      if (op === "addsub") { this._dumpAddTo = id; this._dumpOpen.add(id); lsSet("mh_dump_open", [...this._dumpOpen]); this.redrawDump(".psubin"); return; }
+      if (op === "edit") { this._dumpEdit = id; this.redrawDump(".dedit"); return; }
+      if (op === "delete") {
+        const n = box.querySelector(`.dnode[data-node="${window.CSS.escape(id)}"]`);
+        const hasKids = n && n.querySelector(".dkids");
+        if (hasKids && !(await this.confirm(L("dump_delete_confirm"), L("delete")))) return;
+        if (n && !reduced()) { n.style.transition = "opacity .2s, transform .2s"; n.style.opacity = "0"; n.style.transform = "translateX(10px)"; await new Promise((r) => setTimeout(r, 180)); }
+        this._dumpMenu = null;
+        return this.dumpOp("delete", { id });
+      }
+      this.dumpOp("step", { id, direction: op });
+    }));
+    const sub = q(".psubin");
+    if (sub) {
+      const go = async () => {
+        const texts = sub.value.split(/\n/).map((x) => x.trim()).filter(Boolean);
+        if (!texts.length) { shake(sub); return; }
+        await this.dumpOp("add", { texts, parent_id: this._dumpAddTo });
+        this.redrawDump(".psubin");
+      };
+      sub.addEventListener("keydown", (ev) => { if (ev.key === "Enter") { ev.preventDefault(); go(); } if (ev.key === "Escape") { this._dumpAddTo = null; this.redrawDump(); } });
+      q(".psubok").addEventListener("click", go);
+    }
+    const ed = q(".dedit");
+    if (ed) {
+      const save = async () => { const id = ed.dataset.pedit, text = ed.value.trim(); this._dumpEdit = null; if (text) await this.dumpOp("edit", { id, text }); else this.redrawDump(); };
+      ed.addEventListener("keydown", (ev) => { if (ev.key === "Enter") { ev.preventDefault(); save(); } if (ev.key === "Escape") { this._dumpEdit = null; this.redrawDump(); } });
+      ed.addEventListener("blur", () => { if (this._dumpEdit) save(); });
+    }
   }
 
   /* ---------------------------------------------------------- Insights */
@@ -1392,7 +1579,7 @@ class MHPanel extends HTMLElement {
       if (cv.width !== w * dpr) { cv.width = w * dpr; cv.height = h * dpr; }
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, w, h);
-      const cx = w / 2, cy = h / 2, R = Math.min(w, h) * 0.38;
+      const cx = w / 2, cy = h / 2, R = Math.max(40, Math.min(w, h) / 2 - 46);   // Platz für Ausschlag (bis +36 px) und Strichbreite
       const breathe = reduced() ? 0 : Math.sin(time / 1800) * 0.03;
       // Prior-Ring: 48 Halbstunden
       for (let i = 0; i < prior.length; i++) {

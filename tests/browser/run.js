@@ -87,12 +87,63 @@ const click = (page, sel, i = 0) => page.evaluate(`(() => { const l = (${deep})(
     await page.evaluate(`(() => { const p = (${deep})("[data-pain]")[0]; p.value = 4; p.dispatchEvent(new Event("change", { bubbles: true })); })()`);
     await page.waitForTimeout(250);
     await page.screenshot({ path: path.join(OUT, `${lang}_checkin_evening.png`), fullPage: false });
+    // Brain Dump im Abend-Check-in: mehrere neue Punkte, nur die neuen sichtbar, aufklappbares Abhaken
+    await page.evaluate(`(() => { const i = (${deep})(".dinput")[0]; i.focus(); })()`);
+    await page.keyboard.type(T("Zahnarzt anrufen", "Call dentist"));
+    await page.keyboard.press("Enter");
+    await page.waitForTimeout(150);
+    await page.keyboard.type(T("Milch kaufen", "Buy milk"));
+    await page.keyboard.press("Enter");
+    await page.waitForTimeout(200);
+    check(`${lang} dump: zwei neue Punkte sichtbar`, (await count(page, ".dnew .drow")) === 2);
+    check(`${lang} dump: Fokus bleibt im Eingabefeld`, await page.evaluate(`(() => { const i = (${deep})(".dinput")[0]; return i.getRootNode().activeElement === i; })()`));
+    await click(page, ".dnew [data-dnew]");
+    check(`${lang} dump: neuer Punkt abhakbar`, (await count(page, ".dnew .chk.on")) === 1);
+    check(`${lang} dump: Abhak-Bereich eingeklappt`, (await count(page, ".foldbody.open")) === 0);
+    await click(page, "[data-dfold]");
+    await page.waitForTimeout(400);
+    check(`${lang} dump: Abhak-Bereich aufgeklappt`, (await count(page, ".foldbody.open")) === 1);
+    await click(page, '[data-dexp="a"]');
+    await page.waitForTimeout(350);
+    check(`${lang} dump: Unterpunkte aufgeklappt`, (await count(page, ".dkids.open")) >= 1);
+    await click(page, '[data-dchk="a"]');
+    await page.waitForTimeout(200);
+    check(`${lang} dump: Haken gilt für alle Unterpunkte`, (await count(page, '[data-dchk="a31"].on')) === 1 && (await count(page, '[data-dchk="a2"].on')) === 1);
+    await page.screenshot({ path: path.join(OUT, `${lang}_checkin_dump.png`), fullPage: false });
     await click(page, "button.save");
     await page.waitForTimeout(900);
+    const sub = await page.evaluate(() => { const c = window.__calls.filter((x) => x.type === "mental_health/submit").pop(); return c && c.data.dump; });
+    check(`${lang} dump: wird mit gespeichert`, sub && sub.add.length === 2 && sub.done.includes("a") && sub.done.includes("a31"), JSON.stringify(sub));
     const submits = await page.evaluate(() => window.__calls.filter((c) => c.type === "mental_health/submit").length);
     check(`${lang} checkin: gespeichert`, (await count(page, "mh-checkin")) === 0, `submits=${submits}`);
     const drafts = await page.evaluate(() => window.__calls.filter((c) => c.type === "mental_health/draft").length);
     check(`${lang} checkin: Entwurf serverseitig`, drafts >= 0);
+    // Brain-Dump-Vorschau + Unterseite
+    check(`${lang} dump: Vorschau 2 älteste + 2 neueste`, (await count(page, ".dprev")) === 4);
+    await click(page, '[data-act="dump"]');
+    await page.waitForTimeout(700);
+    check(`${lang} dump: Unterseite`, (await count(page, ".dumppage .dnode")) >= 4);
+    await click(page, '[data-pmenu="b"]');
+    await page.waitForTimeout(300);
+    check(`${lang} dump: Aktionsleiste`, (await count(page, ".dacts.open")) === 1);
+    await click(page, '[data-pop="addsub"][data-id="b"]');
+    await page.waitForTimeout(400);
+    await page.keyboard.type("Belege sammeln");
+    await page.keyboard.press("Enter");
+    await page.waitForTimeout(400);
+    const dumpState = await page.evaluate(() => (window.__dump || []).find((x) => x.id === "b"));
+    check(`${lang} dump: Unterpunkt angelegt`, dumpState && dumpState.children.length === 1, JSON.stringify(dumpState));
+    await click(page, '[data-pchk="a"]');
+    await page.waitForTimeout(400);
+    const a = await page.evaluate(() => (window.__dump || []).find((x) => x.id === "a"));
+    check(`${lang} dump: Kaskade auf Unterseite`, a && a.done && a.children.every((c) => c.done));
+    await click(page, ".dshowdone");
+    await page.waitForTimeout(300);
+    check(`${lang} dump: Erledigte einblenden`, (await count(page, ".dumppage .drow.done")) >= 2);
+    await page.screenshot({ path: path.join(OUT, `${lang}_dump_page.png`), fullPage: true });
+    await click(page, ".dback");
+    await page.waitForTimeout(500);
+    check(`${lang} dump: zurück zu Heute`, (await count(page, ".dprev")) >= 1);
     check(`${lang} today: keine JS-Fehler`, errs.length === 0, errs.join(" ; "));
     await ctx.close();
 
@@ -144,7 +195,7 @@ const click = (page, sel, i = 0) => page.evaluate(`(() => { const l = (${deep})(
 
     // Profil + Quellen-Assistent + Modell
     ({ page, ctx, errs } = await open(browser, `lang=${lang}&user=adult&tab=profile`, DESK));
-    check(`${lang} profile: Module`, (await count(page, "[data-mod]")) === 14);
+    check(`${lang} profile: Module`, (await count(page, "[data-mod]")) === 15);
     check(`${lang} profile: Wochentagszeiten`, (await count(page, "[data-time]")) === 14);
     await page.waitForTimeout(600);
     check(`${lang} profile: Modell-Canvas`, (await count(page, "canvas.model")) === 1);

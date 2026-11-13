@@ -22,6 +22,7 @@ Works on **every Home Assistant installation type** (Home Assistant OS, Containe
 - **Health score** per person and for the family, transparent components, trend.
 - **Insights** – mood chart (morning/evening, forecast vs. actual), year in pixels, weekdays, distribution, sleep timeline, duration vs. optimum, weight trend with healthy band, training rhythm, cycle, connections (sleep ↔ mood, training ↔ energy), "what does you good / what drags you down", goals tracker, weekly review and monthly report, "on this day", happiness jar.
 - **Local "AI" search** in your own words: *"bad days last month with training"*, *"good days in summer"*, *"forest"* – a rule parser turns it into filter chips, full-text search (BM25) with stems and synonyms, German and English.
+- **Brain dump** – a to-do / thought list with up to three levels: add items in the morning and evening check-in, tick off what's done in the evening (ticking an item ticks its sub-items), the two oldest and newest open items on "Today" and a full page to sort, edit and delete. Encrypted like the journal.
 - **Training rhythm** – two rest days, muscle soreness check, "today is a good day for a workout 💪", highlighted when overdue.
 - **Weight** with a smoothed trend, weekly average and a healthy optimum from your height – with binding safety rules (losing weight below the healthy range is never praised, children get no rating at all).
 - **Cycle** – period documentation, learned forecast (optionally refined by basal temperature), only three sensors visible to admins.
@@ -98,6 +99,7 @@ What someone may not change is shown greyed out with a short reason – never hi
 ## Check-ins
 
 - **Morning**: greeting with mood forecast, your night (confirm / correct by dragging), sleepmaxing, weight hint, mood (mandatory), energy, sleep quality, feeling of health, muscle soreness (when relevant), training recommendation, period, yesterday's intentions, birthdays.
+- **Brain dump** (both): add new items (optional); in the evening additionally a fold-out list to tick off open items.
 - **Evening**: mood (mandatory), energy, feeling of health, 1–3 good things (min. 1), 1–2 not-so-good things (min. 1), intentions, journal, training yes/no (mandatory), weight (optional, mandatory once after 15 days without a value – never for children), period.
 - The **evening entry is possible from 14:00** (configurable) at any time from the dashboard; the morning one until 14:00. A manual entry closes an open check-in and removes its notification.
 - **Answer window** default 60 min, then "missed"; filling in later is allowed until the end of the day by default (marked "filled in later"). Entries can be edited and deleted later; statistics and models recalculate.
@@ -114,7 +116,7 @@ What someone may not change is shown greyed out with a short reason – never hi
 
 ## Notifications
 
-Each device is notified on its own – a broken target never blocks the others. The notification opens `/mental-health?checkin=morning|evening`, plus an action "Check in now" and optionally "Later (10 min)". **No text input in notifications** (answers would go through the event bus and the recorder).
+Each device is notified on its own – a broken target never blocks the others. Reminders (default every 15 min) play a sound until the check-in is done or the window ends; on Android a swiped-away notification comes back right away while the window is open. The notification opens `/mental-health?checkin=morning|evening`, plus an action "Check in now" and optionally "Later (10 min)". **No text input in notifications** (answers would go through the event bus and the recorder).
 
 **Android 14+.** Since Android 14, even `persistent: true` notifications can be swiped away (only the locked screen and a few system cases prevent it). Mental Health therefore listens for `mobile_app_notification_cleared` and **re-sends the notification only to the device it was swiped away on, and only while the check-in is open** (rate-limited, `alert_once`). The device is encoded in the tag (`mh_<person>_<slot>_<index>`). Please set in the Companion App: notifications allowed, **notification access** granted, battery **"Unrestricted"** (otherwise the cleared event does not arrive reliably). Sound and lock-screen display are set per channel **"Mental Health – Check-in"** in Android.
 
