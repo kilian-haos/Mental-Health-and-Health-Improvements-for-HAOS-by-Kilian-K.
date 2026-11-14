@@ -178,9 +178,17 @@ function preview() {
   }
   return { start, step: 5, values: vals, sleep: { start: start + 23 * 60, end: start + 31 * 60, kind: "sleep" }, naps: [], in_bed: [], p_sleep: [], level: sleepModel.levels.bed, states: ["3.1"] };
 }
+// Sperr-Zustand wie im Server (runtime.areas): pin=1 -> persönliche PIN 1234, Admin-PIN 9999
+const S = { pin: Q.get("pin") === "1", personal: false, adminSess: false, notice: Q.get("notice") === "1" };
+const isLocked = () => S.pin && !S.personal;
+const gateLocked = () => S.pin && !S.personal && !S.adminSess;
+const areas = () => USER === "new" ? { today: true, insights: false, history: false, family: true, profile: false, admin: false }
+  : { today: !isLocked(), insights: !isLocked(), history: !isLocked(), family: !gateLocked(), profile: !gateLocked(),
+      admin: USER === "admin" ? (S.pin ? (S.personal || S.adminSess) : me.admin_access || S.adminSess) : S.adminSess };
+const lockedErr = { code: "locked", message: "Locked" };
 const handlers = {
-  me: () => me,
-  dashboard: () => dashboard(),
+  me: () => Object.assign(me, { has_pin: S.pin, areas: areas(), notices: S.notice && me.is_admin ? { pin_conflict: { ts: 1, n: 1 } } : {} }),
+  dashboard: () => { if (isLocked()) throw lockedErr; return dashboard(); },
   form: (m) => form(m.slot),
   submit: (m) => { const e = validate(m.slot, m.data); return Object.keys(e).length ? { ok: false, errors: e } : { ok: true, info: {} }; },
   draft: () => ({ ok: true }),
@@ -194,17 +202,26 @@ const handlers = {
       { key: "i_goal", params: { text: "früher ins Bett", done: 4, n: 7 }, tone: "good" }],
       topics: { good: [{ topic: "nature", effect: 1.6, days: 14 }, { topic: "friends", effect: 1.1, days: 9 }], bad: [{ topic: "stress", effect: -1.4, days: 6 }] },
       goals: [{ text: "Früher ins Bett", n: 7, done: 4, partly: 1, not: 2, rate: .64, recurring: true }] } }),
-  family: () => ({ k: 3, enough: true, weather: "mostly_sunny", mood: 7.2, health: 76, history: days.slice(-30).map((d) => ({ day: d.day, mood: Math.min(10, d.mood * .9 + 1), n: 3 })), participation: 67,
-    birthdays: [{ name: "Anna", days: 0, turning: 41 }, { name: "Lena", days: 9, turning: 11 }], members: 3 }),
-  profile: () => ({ profile, rights: me.rights, weight_hidden: false, weight_why: "", self: true, has_pin: false, picture: null, age: child ? 10 : 36, missing: [],
+  family: () => { if (gateLocked()) throw lockedErr; return handlers._family0(); },
+  _family0: () => ({ k: 3, enough: true, weather: "mostly_sunny", mood: 7.2, health: 76, history: days.slice(-30).map((d) => ({ day: d.day, mood: Math.min(10, d.mood * .9 + 1), n: 3 })), participation: 67,
+    birthdays: [{ name: "Anna", days: 0, turning: 41 }, { name: "Lena", days: 9, turning: 11 }], members: 3,
+    mood_day: iso(+today - DAY), mood_today: false, today_n: 2, today: iso(+today), yesterday: iso(+today - DAY),
+    status: [
+      { pid: "p2", name: "Anna K", picture: null, child: false, me: false, today: { morning: "done", evening: "pending" }, yesterday: { morning: "done", evening: "missed" } },
+      { pid: "p1", name: "Kilian K", picture: null, child: false, me: true, today: { morning: "done", evening: "open" }, yesterday: { morning: "done", evening: "done" } },
+      { pid: "p3", name: "Lena Sophie Katharina K", picture: null, child: true, me: false, today: { morning: "missed", evening: "pending" }, yesterday: { morning: "none", evening: "done" } }] }),
+  profile: () => { if (gateLocked()) throw lockedErr; return handlers._profile0(); },
+  _profile0: () => ({ profile, rights: me.rights, weight_hidden: false, weight_why: "", self: true, has_pin: false, picture: null, age: child ? 10 : 36, missing: [],
     notify_services: ["notify.mobile_app_s25", "notify.mobile_app_ipad"], platforms: { t1: "android" } }),
   profile_update: (m) => { const ch = Object.assign({}, m.changes); if (ch.schedule) ch.schedule = Object.assign({}, profile.schedule, ch.schedule); Object.assign(profile, ch); return Object.assign(handlers.profile(), { refused: {} }); },
-  set_pin: () => ({ ok: true, has_pin: true, token: "tok" }),
+  set_pin: (m) => m.new === "9999" ? { ok: false, error: "pin_taken" } : { ok: true, has_pin: !!m.new, token: "tok" },
   unlock: (m) => {
-    if (m.pin === "9999") { me.is_admin = true; me.admin_elevated = true; me.admin_access = true; return { ok: true, admin_token: "atok", elevated: true }; }
-    return m.pin === "1234" ? { ok: true, token: "tok" } : { ok: false, left: 2 };
+    if (m.pin === "9999") { S.adminSess = true; if (USER !== "admin") { me.is_admin = true; me.admin_elevated = true; } me.admin_access = true; return { ok: true, admin_token: "atok", elevated: USER !== "admin" }; }
+    if (m.pin === "1234") { S.personal = true; if (USER === "admin") S.adminSess = true; return Object.assign({ ok: true, token: "tok" }, USER === "admin" ? { admin_token: "atok" } : {}); }
+    return { ok: false, left: 2 };
   },
-  lock: () => ({ ok: true }),
+  lock: () => { S.personal = false; S.adminSess = false; if (USER !== "admin") { me.is_admin = false; me.admin_elevated = false; me.admin_access = false; } return { ok: true }; },
+  admin_dismiss_notice: () => { S.notice = false; return { ok: true }; },
   test_notification: () => ({ sent: 1, targets: 1 }),
   sleep_model: () => sleepModel,
   sleep_reset: () => ({ ok: true }),
@@ -216,7 +233,7 @@ const handlers = {
   request_setup: () => { me.request = { ts: Date.now() / 1000, next: Date.now() / 1000 + 86400 }; return { ok: true, sent: true }; },
   admin: () => adminPayload(),
   admin_settings: () => adminPayload(), admin_llm: (m) => ({ llm: m.changes }), admin_create_person: () => ({ pid: "p9" }), admin_delete_person: () => ({ ok: true }),
-  admin_set_pin: () => ({ ok: true }), admin_reset_pin: () => ({ ok: true, lost: 3 }), admin_dismiss_request: () => ({ ok: true }), admin_unlock: () => ({ ok: true, token: "a" }),
+  admin_set_pin: (m) => { if (m.pin === "1234") throw { code: "pin_in_use", message: "pin_in_use" }; S.notice = false; return { ok: true, admin_pin: !!m.pin, admin_token: "atok2" }; }, admin_reset_pin: () => ({ ok: true, lost: 3 }), admin_dismiss_request: () => ({ ok: true }), admin_unlock: () => ({ ok: true, token: "a" }),
   backup_password: () => ({ ok: true }), backup_create: () => ({ name: "x.mhbackup" }), backup_preview: () => ({ created: new Date().toISOString(), version: "1.0.0", format: 1, persons: [{ id: "p1", name: "Kilian", days: 140 }], size: 182000 }),
   backup_restore: () => ({ ok: true }),
   backup_delete: () => ({ ok: true, backups: [] }),

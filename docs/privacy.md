@@ -17,7 +17,7 @@ Nothing personal is written to entities, attributes, the logbook, the recorder o
 
 - **The person**: everything of their own – entries, texts, analyses, model view with recent nights, export.
 - **Admins**: configuration of all persons, the sensors of all persons (needed for automations), the model state without contents. Not: entries, texts, goals, good/bad things, weight history with live tracking, cycle details, personal analyses. The weight profile value is hidden from admins while live tracking is on.
-- **Other family members**: only the family view – averages without names, only when at least *k* people (default 3, minimum 2) have data for that day.
+- **Other family members**: only the family view – who has checked in (done / open / missed, no contents) and averages without names, only when at least *k* people (default 3, minimum 3) have data for that day. Until then the last day that met this stays visible.
 
 Every websocket command that returns contents resolves the person from the logged-in user. There is no parameter to ask for another person's contents and no admin bypass.
 

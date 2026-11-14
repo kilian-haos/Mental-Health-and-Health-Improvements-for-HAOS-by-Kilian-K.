@@ -2,6 +2,8 @@
 
 Rules: every command that returns *content* resolves the person from `connection.user.id`
 (the person can only ever be oneself – no admin bypass) and checks the person's PIN session.
+Family and the own profile need the personal PIN session or an admin session (`gate_ok`) when the
+person has a PIN.
 Admin commands need admin access: an HA admin (plus the admin PIN session if one is set) or a
 user who entered the admin PIN in this session. Every command accepts the optional `session` and
 `admin_session` fields – the card sends them with every call.
@@ -71,6 +73,24 @@ def _admin(hass: HomeAssistant, connection: Any, msg: dict) -> Any:
     return rt
 
 
+def _gate(rt: Any, connection: Any, msg: dict) -> bool:
+    """Family/own profile: personal PIN session or admin session (if the person has a PIN)."""
+    if rt.gate_ok(connection.user.id, msg.get("session"), msg.get("admin_session")):
+        return True
+    connection.send_error(msg["id"], ERR_LOCKED, "Locked – enter your PIN")
+    return False
+
+
+def _own_or_admin(rt: Any, connection: Any, msg: dict, p: Any) -> bool:
+    """Own person -> gate; another person -> admin access (sends the error)."""
+    if p.user_id == connection.user.id:
+        return _gate(rt, connection, msg)
+    if rt.admin_access(connection.user, msg.get("admin_session")):
+        return True
+    connection.send_error(msg["id"], "admin_locked", "Admin PIN required")
+    return False
+
+
 def _viewer(rt: Any, connection: Any, msg: dict) -> Any:
     return rt.viewer(connection.user, msg.get("admin_session"))
 
@@ -104,7 +124,8 @@ def async_register(hass: HomeAssistant) -> None:
                 ws_test_notification, ws_sleep_model, ws_sleep_reset, ws_source_preview, ws_export, ws_import,
                 ws_llm, ws_pause, ws_dump, ws_dump_op, ws_admin, ws_admin_unlock, ws_admin_create_person, ws_admin_delete_person,
                 ws_admin_settings, ws_admin_set_pin, ws_admin_reset_pin, ws_backup_create, ws_backup_password,
-                ws_backup_preview, ws_backup_restore, ws_backup_download, ws_backup_delete, ws_admin_llm, ws_admin_dismiss_request):
+                ws_backup_preview, ws_backup_restore, ws_backup_download, ws_backup_delete, ws_admin_llm, ws_admin_dismiss_request,
+                ws_admin_dismiss_notice):
         websocket_api.async_register_command(hass, cmd)
 
 
@@ -114,7 +135,7 @@ def async_register(hass: HomeAssistant) -> None:
 def ws_me(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     rt = _rt(hass, connection, msg)
     if rt:
-        connection.send_result(msg["id"], rt.me_payload(connection.user, msg.get("admin_session")))
+        connection.send_result(msg["id"], rt.me_payload(connection.user, msg.get("admin_session"), msg.get("session")))
 
 
 @_cmd({vol.Required("type"): f"{DOMAIN}/subscribe"})
@@ -310,7 +331,7 @@ async def ws_insights(hass: HomeAssistant, connection: Any, msg: dict) -> None:
 @callback
 def ws_family(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     rt = _rt(hass, connection, msg)
-    if rt:
+    if rt and _gate(rt, connection, msg):
         connection.send_result(msg["id"], rt.family_payload(_viewer(rt, connection, msg)))
 
 
@@ -326,8 +347,10 @@ async def ws_pause(hass: HomeAssistant, connection: Any, msg: dict) -> None:
         connection.send_error(msg["id"], ERR_NOT_SET_UP, "Not set up")
         return
     v = _viewer(rt, connection, msg)
-    if not PM.allowed(v, PM.PAUSE, p.rights) or (v.user_id != p.user_id and not rt.admin_access(connection.user, msg.get("admin_session"))):
+    if not PM.allowed(v, PM.PAUSE, p.rights):
         connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "Not allowed")
+        return
+    if not _own_or_admin(rt, connection, msg, p):
         return
     until = msg.get("until")
     if until:
@@ -368,8 +391,7 @@ def ws_profile(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     if not PM.allowed(v, PM.PROFILE_VIEW, p.rights):
         connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "Not allowed")
         return
-    if v.user_id != p.user_id and not rt.admin_access(connection.user, msg.get("admin_session")):
-        connection.send_error(msg["id"], "admin_locked", "Admin PIN required")
+    if not _own_or_admin(rt, connection, msg, p):
         return
     connection.send_result(msg["id"], _profile_view(rt, v, p))
 
@@ -390,8 +412,7 @@ def ws_profile_update(hass: HomeAssistant, connection: Any, msg: dict) -> None:
         if not v.is_admin or not rt.admin_access(connection.user, msg.get("admin_session")):
             connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "Not allowed")
             return
-    elif not rt.person_session_ok(p, v.user_id, msg.get("session")):
-        connection.send_error(msg["id"], ERR_LOCKED, "Locked")
+    elif not _gate(rt, connection, msg):
         return
     changes = dict(msg["changes"])
     if "targets" in changes:
@@ -408,7 +429,7 @@ async def ws_set_pin(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     if rt is None:
         return
     try:
-        connection.send_result(msg["id"], await rt.async_set_pin(connection.user.id, msg.get("old"), msg.get("new")))
+        connection.send_result(msg["id"], await rt.async_set_pin(connection.user, msg.get("old"), msg.get("new")))
     except ValueError as err:
         connection.send_error(msg["id"], str(err), str(err))
 
@@ -421,8 +442,10 @@ async def ws_test_notification(hass: HomeAssistant, connection: Any, msg: dict) 
         return
     v = _viewer(rt, connection, msg)
     p = rt.persons.get(msg["pid"]) if msg.get("pid") else rt.person_for_user(v.user_id)
-    if p is None or not (v.user_id == p.user_id or (v.is_admin and rt.admin_access(connection.user, msg.get("admin_session")))):
+    if p is None or not (v.user_id == p.user_id or v.is_admin):
         connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "Not allowed")
+        return
+    if not _own_or_admin(rt, connection, msg, p):
         return
     n = await rt.send_test(p)
     connection.send_result(msg["id"], {"sent": n, "targets": len(p.profile["targets"])})
@@ -441,17 +464,18 @@ def ws_sleep_model(hass: HomeAssistant, connection: Any, msg: dict) -> None:
         connection.send_error(msg["id"], ERR_NOT_SET_UP, "Not set up")
         return
     own = v.user_id == p.user_id
-    if own and not rt.person_session_ok(p, v.user_id, msg.get("session")):
-        connection.send_error(msg["id"], ERR_LOCKED, "Locked")
-        return
-    if not own and not (v.is_admin and rt.admin_access(connection.user, msg.get("admin_session"))):
+    if not own and not v.is_admin:
         connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "Not allowed")
         return
+    if not _own_or_admin(rt, connection, msg, p):
+        return
+    # Nächte nur mit der persönlichen Sitzung (die Admin-PIN zeigt nur das Modell)
+    full = own and rt.person_session_ok(p, v.user_id, msg.get("session"))
     view = p.sleep.view()
-    if not own:
+    if not full:
         view.pop("history", None)
         view.pop("bias", None)
-    view["state"] = p.live.state_now if (p.live and own) else None
+    view["state"] = p.live.state_now if (p.live and full) else None
     view["sources"] = [s.to_dict() for s in p.sources]
     connection.send_result(msg["id"], view)
 
@@ -466,6 +490,8 @@ def ws_sleep_reset(hass: HomeAssistant, connection: Any, msg: dict) -> None:
     p = rt.persons.get(msg["pid"]) if msg.get("pid") else rt.person_for_user(v.user_id)
     if p is None or not PM.allowed(v, PM.PROFILE_EDIT, p.rights):
         connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "Not allowed")
+        return
+    if not _own_or_admin(rt, connection, msg, p):
         return
     p.sleep.reset()
     rt.save_person(p.pid, model=True)
@@ -485,6 +511,8 @@ async def ws_source_preview(hass: HomeAssistant, connection: Any, msg: dict) -> 
     p = rt.persons.get(msg["pid"]) if msg.get("pid") else rt.person_for_user(v.user_id)
     if p is None or not PM.allowed(v, PM.PROFILE_EDIT, p.rights):
         connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "Not allowed")
+        return
+    if not _own_or_admin(rt, connection, msg, p):
         return
     connection.send_result(msg["id"], await rt.async_source_preview(p.pid, msg["source"], msg["hours"]))
 
@@ -759,7 +787,9 @@ async def ws_admin_set_pin(hass: HomeAssistant, connection: Any, msg: dict) -> N
     except ValueError as err:
         connection.send_error(msg["id"], str(err), str(err))
         return
-    connection.send_result(msg["id"], {"ok": True, "admin_pin": rt.admin_pin_set()})
+    # Alle Admin-Sitzungen enden mit der neuen PIN – wer sie gerade gesetzt hat, bleibt drin
+    connection.send_result(msg["id"], {"ok": True, "admin_pin": rt.admin_pin_set(),
+                                       "admin_token": rt.new_admin_session(connection.user)})
 
 
 @_cmd({vol.Required("type"): f"{DOMAIN}/admin_reset_pin", vol.Required("pid"): str, AS: str})
@@ -906,3 +936,14 @@ async def ws_backup_delete(hass: HomeAssistant, connection: Any, msg: dict) -> N
         connection.send_error(msg["id"], err.code, err.code)
         return
     connection.send_result(msg["id"], {"ok": True, "backups": await hass.async_add_executor_job(archive.list_backups, rt)})
+
+
+@_cmd({vol.Required("type"): f"{DOMAIN}/admin_dismiss_notice", vol.Required("notice"): vol.In(["pin_conflict"])})
+@callback
+def ws_admin_dismiss_notice(hass: HomeAssistant, connection: Any, msg: dict) -> None:
+    """'Doesn't matter' – hide the notice until it happens again."""
+    rt = _admin(hass, connection, msg)
+    if rt is None:
+        return
+    rt.dismiss_notice(msg["notice"])
+    connection.send_result(msg["id"], {"ok": True})

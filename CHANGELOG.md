@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.2.0 – 2026-11-14
+
+- **Every area behind the code**: with a personal PIN, Today, Insights, History, Family, Profile and Admin stay locked until a code is entered (checked on the server, not only in the panel).
+  - The personal PIN opens everything you may use, incl. Admin for admins.
+  - The admin PIN entered instead opens only Admin, Profile and Family; Today, Insights and History explain that they need the personal PIN and offer a way to the admin area.
+  - Non-admins don't see the Admin tab until they enter the admin PIN. Locked tabs show a small lock.
+- **PIN conflicts**: a personal PIN may not be the admin PIN. The person is asked right in the PIN dialog to choose another one; admins get a notification and a notice in the panel with "Change now" and "Doesn't matter" (hidden until it happens again). A new admin PIN that is already someone's personal PIN is refused ("already in use"). Two people with the same personal PIN are fine. PIN changes are limited to 6 per hour.
+- **Family view**:
+  - Who has checked in today, morning and evening, as done, open, missed, not yet or paused.
+  - Yesterday as two small dots per person.
+  - The family mood always stays visible with the last value from at least 3 people ("As of …") and updates as soon as 3 people have filled in today.
+  - "Family values from" can no longer be set below 3.
+- **Admin PIN**: whoever sets it stays in the admin area afterwards (no second unlock).
+- **Layout**: the collapsed guide shows "?" and the arrow neatly stacked; the lock screen is compact.
+
 ## 1.1.2 – 2026-11-14
 
 - **Fixed: the Home Assistant app on macOS crashed when a check-in time was clicked.** Times no longer use the browser's native time picker. They now use their own HH:MM field: type `2130`, `21:30` or just `7` (becomes 07:00); arrow keys move by 5 minutes (Shift: 1 hour); invalid times are rejected with a short shake. This also applies to the times in the admin settings.

@@ -203,6 +203,7 @@ def install() -> None:
     pn = _mod("homeassistant.components.persistent_notification")
     pn.async_create = lambda hass, message, title=None, notification_id=None: NOTIFICATIONS.append(
         {"message": message, "title": title, "id": notification_id})
+    pn.async_dismiss = lambda hass, notification_id: NOTIFICATIONS.__setitem__(slice(None), [n for n in NOTIFICATIONS if n.get("id") != notification_id])
     _mod("homeassistant.components").__path__ = []
 
     dt = _mod("homeassistant.util.dt")

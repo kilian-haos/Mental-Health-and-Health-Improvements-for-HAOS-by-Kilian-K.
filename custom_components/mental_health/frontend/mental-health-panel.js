@@ -61,6 +61,15 @@ Object.assign(M.I18N.en, {
   ch_polarity: "{v}", ch_trained: "training", ch_sleep_short: "little sleep", ch_sleep_long: "lots of sleep", ch_period: "period",
   ch_journal: "journal", ch_goals: "goals", ch_weekend: "weekend", ch_weekdays: "weekdays", ch_morning: "morning", ch_evening: "evening",
   family_hist: "Family mood", members: "{n} people",
+  lock_area_sub: "Enter your code to open this area.", lock_personal_title: "Needs your personal PIN",
+  lock_personal_sub: "The admin PIN opens Admin, Profile and Family. Your entries only open with your own PIN.", go_admin: "Go to admin area",
+  pin_taken: "This PIN can't be used – please choose a different one.", pin_too_many: "Too many PIN changes – please try again later.",
+  pin_in_use: "This code is already in use – please choose a different one.",
+  nc_title: "Change the admin PIN", nc_text: "Someone tried to use the admin PIN as their personal PIN and now knows it. Choose a new admin PIN.",
+  nc_change: "Change now", nc_ignore: "Doesn't matter",
+  fam_today: "Checked in today", fam_yesterday: "Yesterday", fam_you: "you",
+  fs_done: "done", fs_open: "open", fs_missed: "missed", fs_pending: "not yet", fs_paused: "paused", fs_off: "manual", fs_none: "no entry",
+  fam_mood_today: "Today · {n} entries", fam_mood_from: "As of {d} · today {n} of at least {k} so far",
   // Profil
   p_basics: "About you", p_name: "Display name", p_birthdate: "Date of birth", p_birth_noyear: "The year is optional – leave it empty for a birthday without a year.", p_sex: "Sex",
   sex_female: "female", sex_male: "male", sex_other: "other", sex_unspecified: "not specified", p_height: "Height (cm)",
@@ -186,6 +195,15 @@ Object.assign(M.I18N.de, {
   ch_polarity: "{v}", ch_trained: "Training", ch_sleep_short: "wenig Schlaf", ch_sleep_long: "viel Schlaf", ch_period: "Periode",
   ch_journal: "Journal", ch_goals: "Ziele", ch_weekend: "Wochenende", ch_weekdays: "werktags", ch_morning: "morgens", ch_evening: "abends",
   family_hist: "Familienstimmung", members: "{n} Personen",
+  lock_area_sub: "Gib deinen Code ein, um diesen Bereich zu öffnen.", lock_personal_title: "Braucht deinen persönlichen PIN",
+  lock_personal_sub: "Die Admin-PIN öffnet Admin, Profil und Familie. Deine Einträge öffnet nur dein eigener PIN.", go_admin: "Zum Admin-Bereich",
+  pin_taken: "Dieser PIN geht nicht – bitte wähle einen anderen.", pin_too_many: "Zu viele PIN-Änderungen – bitte später noch einmal versuchen.",
+  pin_in_use: "Dieser Code ist bereits in Benutzung – bitte wähle einen anderen.",
+  nc_title: "Admin-PIN ändern", nc_text: "Jemand wollte die Admin-PIN als persönlichen PIN verwenden und kennt sie jetzt. Wähle eine neue Admin-PIN.",
+  nc_change: "Jetzt ändern", nc_ignore: "Ist egal",
+  fam_today: "Heute eingetragen", fam_yesterday: "Gestern", fam_you: "du",
+  fs_done: "eingetragen", fs_open: "offen", fs_missed: "verpasst", fs_pending: "noch nicht", fs_paused: "Pause", fs_off: "manuell", fs_none: "kein Eintrag",
+  fam_mood_today: "Heute · {n} Einträge", fam_mood_from: "Stand {d} · heute bisher {n} von mindestens {k}",
   p_basics: "Über dich", p_name: "Anzeigename", p_birthdate: "Geburtsdatum", p_birth_noyear: "Das Jahr ist optional – leer lassen für einen Geburtstag ohne Jahr.", p_sex: "Geschlecht",
   sex_female: "weiblich", sex_male: "männlich", sex_other: "anderes", sex_unspecified: "keine Angabe", p_height: "Größe (cm)",
   p_weight: "Gewicht (kg)", p_weight_live: "Live-Gewichtstracking", p_weight_live_hint: "Werte bleiben nur für dich sichtbar. Ohne Sensor wirst du abends gefragt.",
@@ -271,6 +289,10 @@ const PCSS = `
 .layout{ display:flex; gap:14px; align-items:flex-start; }
 .guide{ width:280px; flex:0 0 280px; background:var(--c-surface); border-radius:var(--rad); padding:16px; position:sticky; top:12px; transition:width .3s var(--ease), flex-basis .3s var(--ease); overflow:hidden; }
 .guide.collapsed{ width:52px; flex-basis:52px; padding:12px 8px; }
+.guide.collapsed > .row{ flex-direction:column; align-items:center; gap:4px; }
+.guide.collapsed > .row .spacer{ display:none; }
+.guide.collapsed > .row b{ font-size:17px; line-height:1; padding-top:2px; }
+.guide.collapsed .gt{ width:34px; height:34px; padding:0 !important; border-radius:50%; display:grid; place-items:center; }
 .guide.collapsed .gbody{ opacity:0; pointer-events:none; height:0; }
 .guide .gbody{ transition:opacity .25s var(--ease); }
 .guide p{ font-size:13px; color:var(--c-muted); line-height:1.5; margin:9px 0; }
@@ -421,7 +443,34 @@ canvas.model{ width:100%; height:280px; display:block; border-radius:var(--rad-i
 .dedit{ flex:1; min-width:0; padding:7px 10px; font-size:14.5px; }
 .dsubadd{ display:flex; gap:8px; padding:4px 0 10px 62px; }
 .dsubadd input{ flex:1; min-width:0; padding:8px 12px; font-size:14px; }
-.lock{ display:grid; place-items:center; min-height:60vh; text-align:center; gap:14px; }
+.lock{ display:grid; place-items:center; align-content:center; min-height:60vh; text-align:center; gap:12px; }
+.lock .sub{ max-width:420px; }
+.lock .row{ justify-content:center; flex-wrap:wrap; gap:8px; }
+.lock .lk-ic{ font-size:46px; animation:mh-breathe 4s ease-in-out infinite; display:inline-block; }
+.tab.lk, nav.bottom button.lk{ opacity:.7; }
+.tab.lk::after{ content:"🔒"; font-size:10px; margin-left:5px; }
+.notice{ border:1.5px solid color-mix(in srgb, var(--c-amber) 45%, transparent); background:color-mix(in srgb, var(--c-amber) 7%, var(--c-surface)); }
+.notice .row{ flex-wrap:wrap; gap:8px; margin-top:12px; justify-content:flex-end; }
+.notice.out{ animation:mh-out .28s var(--ease) forwards; }
+@keyframes mh-out{ to{ opacity:0; transform:translateY(-6px) scale(.98); } }
+.fam-hero .stand{ font-size:12px; color:var(--c-muted); margin-top:4px; }
+.fam-list .fm{ display:grid; grid-template-columns:40px minmax(0,1fr) auto; align-items:center; column-gap:12px; row-gap:8px; padding:10px 0;
+  border-bottom:1px solid rgba(255,255,255,.04); animation:mh-rise .3s var(--ease) both; animation-delay:calc(var(--i, 0) * 40ms); }
+.fam-list .fm:last-child{ border-bottom:0; }
+.fm .nm{ font-weight:600; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.fm .nm .you{ font-weight:500; font-size:11.5px; color:var(--c-teal); margin-left:4px; }
+.fm .yd{ display:flex; align-items:center; gap:5px; font-size:11px; color:var(--c-muted); margin-top:3px; }
+.fm .yd i{ width:7px; height:7px; border-radius:50%; background:var(--c-raise2); display:inline-block; }
+.fm .yd i.done{ background:var(--c-teal); }
+.fm .yd i.missed{ background:var(--c-amber); }
+.fm .yd i.paused, .fm .yd i.off{ background:var(--c-line); }
+.fm .pills{ display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+.st{ display:inline-flex; align-items:center; gap:5px; padding:5px 10px; border-radius:999px; font-size:12px; background:var(--c-raise); color:var(--c-muted); white-space:nowrap; transition:background .3s var(--ease), color .3s; }
+.st.done{ background:var(--c-active); color:var(--c-teal); font-weight:600; }
+.st.open{ color:var(--c-teal); box-shadow:inset 0 0 0 1.5px color-mix(in srgb, var(--c-teal) 55%, transparent); animation:mh-pulse 2.4s ease-in-out infinite; }
+.st.missed{ background:rgba(245,177,76,.14); color:var(--c-amber); font-weight:600; }
+.st.paused, .st.off{ opacity:.7; }
+@media (max-width:560px){ .fam-list .fm{ grid-template-columns:36px minmax(0,1fr); } .fm .pills{ grid-column:2; justify-content:flex-start; } .fam-list .avatar{ width:36px; height:36px; } }
 .dialog > div:first-child{ white-space:pre-line; }
 .note{ font-size:11.5px; color:var(--c-muted); text-align:center; margin-top:18px; }
 @media (max-width:760px){
@@ -776,23 +825,27 @@ class MHPanel extends HTMLElement {
     const L = (k, v) => this.t(k, v);
     const me = this._me;
     const flag = me.admin_elevated ? `<span class="chip amber admin-flag" title="${esc(L("admin_in_hint"))}">🛡️ ${esc(L("admin_in_short"))}</span><button class="ghost kbtn lockb" title="${esc(L("admin_end"))}">${esc(L("admin_end"))}</button>` : "";
-    const showKey = !me.admin_elevated && ((me.has_pin && !this.api.session) || (me.admin_pin && !me.admin_access));
+    const areas = me.areas || {};
+    const lockedAny = tabs.some((k) => areas[k] === false && (k !== "admin" || me.ha_admin));
+    const showKey = !me.admin_elevated && (lockedAny || (me.has_pin && !this.api.session) || (me.admin_pin && !me.admin_access));
     const showLock = !me.admin_elevated && me.has_pin && !!this.api.session;
     const keys = `${showKey ? `<button class="ghost kbtn keyb" title="${esc(L("enter_code"))}" aria-label="${esc(L("enter_code"))}">🔑</button>` : ""}${showLock ? `<button class="ghost kbtn lockb" title="${esc(L("lock_now"))}" aria-label="${esc(L("lock_now"))}">🔒</button>` : ""}`;
     const head = `<div class="top"><button class="ghost menu" title="Menu">☰</button><div class="h1">${esc(L("app"))}</div>${flag}<span class="spacer"></span>${keys}
-      <div class="tabs">${tabs.map((k) => `<button class="tab ${this.tab === k ? "on" : ""}" data-tab="${k}">${esc(L("tab_" + k))}</button>`).join("")}</div></div>`;
+      <div class="tabs">${tabs.map((k) => `<button class="tab ${this.tab === k ? "on" : ""} ${areas[k] === false ? "lk" : ""}" data-tab="${k}">${esc(L("tab_" + k))}</button>`).join("")}</div></div>`;
     const guide = `<aside class="guide ${this.guideOpen ? "" : "collapsed"}"><div class="row"><b style="color:var(--c-teal)">${this.guideOpen ? esc(L("guide_title")) : "?"}</b><span class="spacer"></span>
       <button class="ghost gt" style="padding:4px 10px">${this.guideOpen ? "‹" : "›"}</button></div>
       <div class="gbody">${["g_1", "g_2", "g_3", "g_4", "g_5", "g_6", "g_7"].map((k) => `<p>${L(k)}</p>`).join("")}<p style="font-size:11.5px">${esc(L("not_medical"))}</p></div></aside>`;
-    const bottom = `<nav class="bottom">${tabs.map((k) => `<button class="${this.tab === k ? "on" : ""}" data-tab="${k}"><span class="ic">${TAB_ICONS[k]}</span>${esc(L("tab_" + k))}</button>`).join("")}</nav>`;
+    const bottom = `<nav class="bottom">${tabs.map((k) => `<button class="${this.tab === k ? "on" : ""} ${areas[k] === false ? "lk" : ""}" data-tab="${k}"><span class="ic">${areas[k] === false ? "🔒" : TAB_ICONS[k]}</span>${esc(L("tab_" + k))}</button>`).join("")}</nav>`;
     if (!quiet || !this.shadowRoot.querySelector(".main")) {
       this.shadowRoot.innerHTML = `<style>${CSS}${PCSS}</style><div class="app">${head}<div class="layout">${guide}<main class="main"><div class="sec wide center"><div class="spinner"></div></div></main></div></div>${bottom}`;
       this.bindShell();
     }
     const main = this.shadowRoot.querySelector(".main");
+    // Bereich gesperrt? Der Server sagt in me.areas, was gerade offen ist.
+    if (areas[this.tab] === false) { this.sub = null; this.lockScreen(main); return; }
     try {
       const html = this.sub === "dump" ? await this.page_dump() : await this["tab_" + this.tab](quiet);
-      if (html != null) { main.innerHTML = html; this.afterRender(main); }
+      if (html != null) { main.innerHTML = html; this.afterRender(main); this.noticeBanner(main); }
     } catch (e) {
       if (e && e.code === "locked") {
         main.innerHTML = `<div class="sec wide lock"><div style="font-size:46px">🔒</div><div class="title">${esc(L("pin_title"))}</div><div class="sub">${esc(L("pin_sub"))}</div><button class="primary unl">${esc(L("pin_title"))}</button></div>`;
@@ -809,6 +862,55 @@ class MHPanel extends HTMLElement {
       main.querySelector(".retry").addEventListener("click", () => this.render());
     }
   }
+  lockScreen(main) {
+    const L = (k, v) => this.t(k, v), me = this._me, areas = me.areas || {};
+    const personal = ["today", "insights", "history"].includes(this.tab) && areas.family && !!this.api.adminSession;
+    main.innerHTML = `<div class="sec wide lock"><div class="lk-ic">🔒</div>
+      <div class="title">${esc(L(personal ? "lock_personal_title" : this.tab === "admin" ? "admin_pin_title" : "pin_title"))}</div>
+      <div class="sub">${esc(L(personal ? "lock_personal_sub" : "lock_area_sub"))}</div>
+      <div class="row"><button class="primary unl">${esc(L("enter_code"))}</button>${personal && areas.admin ? `<button class="goadm">${esc(L("go_admin"))}</button>` : ""}</div></div>`;
+    main.querySelector(".unl").addEventListener("click", () => this.unlockAndShow());
+    const ga = main.querySelector(".goadm");
+    if (ga) ga.addEventListener("click", () => this.goTab("admin"));
+  }
+  /* Code eingeben; öffnet er diesen Bereich nicht (Admin-PIN auf "Heute"), weiter in den Admin-Bereich */
+  async unlockAndShow() {
+    try { await this.unlock(this.tab === "admin"); } catch (e) { return; }
+    const a = this._me.areas || {};
+    if (a[this.tab] === false && a.admin && this.tabs().includes("admin")) this.tab = "admin";
+    this.render();
+  }
+  goTab(k) { this.tab = k; lsSet("mh_tab", k); this.sub = null; this.render(); }
+  /* Hinweis für Admins: Admin-PIN wurde bekannt -> sofort ändern oder "ist egal" */
+  noticeBanner(main) {
+    const me = this._me, L = (k, v) => this.t(k, v);
+    if (!me.is_admin || !(me.notices || {}).pin_conflict || main.querySelector(".notice")) return;
+    main.insertAdjacentHTML("afterbegin", `<section class="sec wide rise notice" role="alert"><h3>⚠️ ${esc(L("nc_title"))}</h3><div class="hint" style="font-size:13px">${esc(L("nc_text"))}</div>
+      <div class="row"><button class="ghost ncig">${esc(L("nc_ignore"))}</button><button class="primary ncch">${esc(L("nc_change"))}</button></div></section>`);
+    const box = main.querySelector(".notice");
+    const hide = () => { box.classList.add("out"); setTimeout(() => box.remove(), 300); };
+    box.querySelector(".ncig").addEventListener("click", async () => {
+      try { await this.call("admin_dismiss_notice", { notice: "pin_conflict" }, true); } catch (e) { return; }
+      me.notices = {}; hide();
+    });
+    box.querySelector(".ncch").addEventListener("click", async () => {
+      if (await this.changeAdminPin()) { me.notices = {}; hide(); }
+    });
+  }
+  /* Neue Admin-PIN im PIN-Feld; ein bereits benutzter Code wird direkt im Dialog abgelehnt */
+  async changeAdminPin() {
+    const L = (k) => this.t(k);
+    try {
+      const r = await pinDialog(this.shadowRoot, this.lang, { title: L("pin_new"), sub: L("a_pin_hint"), check: async (pin) => {
+        try { return Object.assign({ ok: true }, await this.call("admin_set_pin", { pin }, true)); }
+        catch (e) { if (e && e.code === "pin_in_use") return { ok: false, msg: L("pin_in_use") }; throw e; }
+      } });
+      this.api.adminSession = r.admin_token || null;
+      try { this._me = await this.api.call("me"); } catch (e) { /* bleibt */ }
+      toast(this.shadowRoot, L("pin_set_ok"));
+      return true;
+    } catch (e) { return false; }
+  }
   bindShell() {
     const R = this.shadowRoot;
     R.querySelectorAll("[data-tab]").forEach((b) => b.addEventListener("click", () => {
@@ -819,7 +921,7 @@ class MHPanel extends HTMLElement {
     R.querySelector(".gt").addEventListener("click", () => { this.guideOpen = !this.guideOpen; lsSet("mh_guide", this.guideOpen); this.render(true); this.shadowRoot.querySelector(".guide").classList.toggle("collapsed", !this.guideOpen); this.bindShellGuide(); });
     R.querySelector(".menu").addEventListener("click", () => this.dispatchEvent(new Event("hass-toggle-menu", { bubbles: true, composed: true })));
     const kb = R.querySelector(".keyb");
-    if (kb) kb.addEventListener("click", () => this.unlock().then(() => this.render()).catch(() => {}));
+    if (kb) kb.addEventListener("click", () => this.unlockAndShow());
     R.querySelectorAll(".lockb").forEach((b) => b.addEventListener("click", () => this.lockNow()));
   }
   bindShellGuide() {
@@ -1389,13 +1491,23 @@ class MHPanel extends HTMLElement {
     const L = (k, v) => this.t(k, v), lang = this.lang;
     const f = await this.call("family");
     const pts = (f.history || []).map((h) => ({ x: new Date(h.day + "T12:00").getTime(), y: h.mood, tip: `${fmtDate(h.day, lang)} · ${fmtNum(h.mood, 1, lang)}` }));
-    return `<section class="sec wide rise"><div class="row" style="flex-wrap:wrap;gap:18px">
+    const stand = f.enough ? (f.mood_today ? L("fam_mood_today", { n: f.today_n }) : L("fam_mood_from", { d: fmtDate(f.mood_day, lang), n: f.today_n, k: f.k })) : "";
+    const list = f.status || [];
+    const cnt = (slot) => list.filter((m) => m.today[slot] === "done").length;
+    const slotIc = { morning: "☀️", evening: "🌙" };
+    const pill = (m, slot) => `<span class="st ${m.today[slot]}" title="${esc(L(slot) + ": " + L("fs_" + m.today[slot]))}">${slotIc[slot]} ${m.today[slot] === "done" ? "✓" : ""} ${esc(L("fs_" + m.today[slot]))}</span>`;
+    const yd = (m) => `<div class="yd">${esc(L("fam_yesterday"))} ${["morning", "evening"].map((s) => `<i class="${m.yesterday[s]}" title="${esc(L(s) + ": " + L("fs_" + m.yesterday[s]))}"></i>`).join("")}</div>`;
+    return `<section class="sec wide rise fam-hero"><div class="row" style="flex-wrap:wrap;gap:18px">
       ${f.enough ? `<span style="font-size:72px;display:inline-block;animation:mh-breathe 4s ease-in-out infinite">${M.WEATHER[f.weather] || "⛅"}</span>
-        <div><div class="title" style="font-size:24px">${esc(L("weather_" + f.weather))}</div><div class="sub">${esc(L("mood"))} ${fmtNum(f.mood, 1, lang)} · ${esc(L("members", { n: f.members }))}</div></div>`
+        <div><div class="title" style="font-size:24px">${esc(L("weather_" + f.weather))}</div><div class="sub">${esc(L("mood"))} ${fmtNum(f.mood, 1, lang)} · ${esc(L("members", { n: f.members }))}</div><div class="stand">${esc(stand)}</div></div>`
         : `<div class="hint">${esc(L("family_not_enough", { k: f.k }))}</div>`}
       <span class="spacer"></span>${f.health != null ? ring(f.health, 100, 112, "var(--c-teal)", f.health, L("health_score")) : ""}
       ${f.participation != null ? ring(f.participation, 100, 112, "var(--c-amber)", f.participation + " %", L("participation")) : ""}</div></section>
-      <section class="sec wide rise" style="animation-delay:60ms"><h3>📈 ${esc(L("family_hist"))}</h3>${pts.length ? lineChart([{ points: pts, color: "#2fd6b0", area: true, dots: true, r: 2.5 }], { h: 170, ph: 170, y0: 1, y1: 10, yticks: [1, 5.5, 10] }) : `<div class="hint">${esc(L("family_not_enough", { k: f.k }))}</div>`}</section>
+      ${list.length ? `<section class="sec wide rise fam-list" style="animation-delay:40ms"><h3>✅ ${esc(L("fam_today"))} <span class="chip small">☀️ ${cnt("morning")}/${list.length} · 🌙 ${cnt("evening")}/${list.length}</span></h3>
+        ${list.map((m, i) => `<div class="fm" style="--i:${i}"><div class="avatar">${m.picture ? `<img src="${esc(m.picture)}" alt="">` : esc((m.name || "?")[0])}</div>
+          <div style="min-width:0"><div class="nm">${esc(m.name)}${m.child ? " 🧒" : ""}${m.me ? `<span class="you">· ${esc(L("fam_you"))}</span>` : ""}</div>${yd(m)}</div>
+          <div class="pills">${pill(m, "morning")}${pill(m, "evening")}</div></div>`).join("")}</section>` : ""}
+      <section class="sec wide rise" style="animation-delay:80ms"><h3>📈 ${esc(L("family_hist"))}</h3>${pts.length ? lineChart([{ points: pts, color: "#2fd6b0", area: true, dots: true, r: 2.5 }], { h: 170, ph: 170, y0: 1, y1: 10, yticks: [1, 5.5, 10] }) : `<div class="hint">${esc(L("family_not_enough", { k: f.k }))}</div>`}</section>
       <section class="sec rise" style="animation-delay:120ms"><h3>🎂 ${esc(L("birthdays"))}</h3>${(f.birthdays || []).length ? f.birthdays.map((b) => `<div class="row" style="margin:8px 0"><span>${b.days === 0 ? "🎉" : "🎈"}</span><span>${esc(b.days === 0 ? L("bd_today", { name: b.name }) : b.days === 1 ? L("bd_tomorrow", { name: b.name }) : L("bd_in", { name: b.name, n: b.days }))}</span>${b.turning ? `<span class="hint">· ${esc(L("turning", { n: b.turning }))}</span>` : ""}</div>`).join("") : `<div class="hint">${esc(L("no_data"))}</div>`}</section>`;
   }
 
@@ -1615,11 +1727,20 @@ class MHPanel extends HTMLElement {
       let old = null;
       try {
         if (pv.has_pin) old = await this.pinEntry(L("pin_old"));
-        let nw = null;
-        if (mode !== "off") nw = await this.pinEntry(L("pin_new"));
-        const r = await this.call("set_pin", { old, new: nw });
-        if (!r.ok) { toast(this.shadowRoot, L("pin_wrong").replace("{n}", r.left ?? "?")); return; }
+        let r;
+        if (mode === "off") r = await this.call("set_pin", { old, new: null });
+        else {
+          // Neuer PIN direkt im Dialog prüfen: ist er nicht möglich, gleich einen anderen eingeben
+          r = (await pinDialog(this.shadowRoot, this.lang, { title: L("pin_new"), sub: "", check: async (pin) => {
+            const x = await this.call("set_pin", { old, new: pin });
+            if (!x.ok && x.error === "pin_taken") return { ok: false, msg: L("pin_taken") };
+            return { ok: true, r: x };
+          } })).r;
+        }
+        if (!r.ok) { toast(this.shadowRoot, r.error === "too_many" ? L("pin_too_many") : L("pin_wrong").replace("{n}", r.left ?? "?")); return; }
         if (r.token) this.api.session = r.token;
+        if (r.admin_token) this.api.adminSession = r.admin_token;
+        try { this._me = await this.api.call("me"); } catch (e) { /* bleibt */ }
         toast(this.shadowRoot, nw ? L("pin_set_ok") : L("pin_removed"));
         this.render(true);
       } catch (e) { /* abgebrochen */ }
@@ -1898,7 +2019,7 @@ class MHPanel extends HTMLElement {
       ${numIn("window_min", "st_window", 5, 1440)}${numIn("remind_min", "st_remind", 0, 240)}
       <div class="kv"><span>${esc(L("st_late"))}</span><select data-st="late_entry" style="max-width:200px">${["none", "day_end", "3_days"].map((v) => `<option value="${v}" ${s.late_entry === v ? "selected" : ""}>${esc(L("late_" + v))}</option>`).join("")}</select></div>
       <div class="kv"><span>${esc(L("st_load"))}</span><div class="segs">${[1, 2, 3].map((v) => `<button class="seg ${s.load_level === v ? "on" : ""}" data-load="${v}">${v}</button>`).join("")}</div></div>
-      ${numIn("family_k", "st_family_k", 2, 10)}${numIn("low_mood_days", "st_low_days", 1, 14)}${numIn("low_mood_max", "st_low_max", 1, 6)}${numIn("request_cooldown_h", "st_cooldown", 1, 336)}
+      ${numIn("family_k", "st_family_k", 3, 10)}${numIn("low_mood_days", "st_low_days", 1, 14)}${numIn("low_mood_max", "st_low_max", 1, 6)}${numIn("request_cooldown_h", "st_cooldown", 1, 336)}
       <div class="kv"><span>${esc(L("st_weekly"))}</span><button class="toggle ${s.weekly_report ? "on" : ""}" data-stt="weekly_report"></button></div>
       ${["workday_entity", "weather_entity", "daylight_entity"].map((k) => `<div class="field" style="margin-top:8px"><label class="lbl">${esc(L("st_" + k.replace("_entity", "")))}</label><input list="mh-all" data-st="${k}" value="${esc(s[k] || "")}"></div>`).join("")}`);
     // Admin-Benachrichtigungen + PIN
@@ -1953,11 +2074,12 @@ class MHPanel extends HTMLElement {
     root.querySelectorAll("[data-atrm]").forEach((b) => b.addEventListener("click", async () => { const t = s.admin_targets.slice(); t.splice(parseInt(b.dataset.atrm, 10), 1); await setS({ admin_targets: t }); this.render(true); }));
     root.querySelector(".atadd").addEventListener("click", async () => { const v = root.querySelector(".atsel").value; if (!v) return; await setS({ admin_targets: s.admin_targets.concat([{ kind: "service", service: v, name: v }]) }); this.render(true); });
     const apFlow = async (off) => {
+      if (!off) { if (await this.changeAdminPin()) this.render(true); return; }
       try {
-        const pin = off ? null : await this.pinEntry(L("pin_new"));
-        await this.call("admin_set_pin", { pin }, true);
-        this.api.adminSession = null;
-        toast(this.shadowRoot, off ? L("pin_removed") : L("pin_set_ok"));
+        const r = await this.call("admin_set_pin", { pin: null }, true);
+        this.api.adminSession = r.admin_token || null;
+        try { this._me = await this.api.call("me"); } catch (e) { /* bleibt */ }
+        toast(this.shadowRoot, L("pin_removed"));
         this.render(true);
       } catch (e) { /* abgebrochen */ }
     };

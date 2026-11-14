@@ -191,7 +191,7 @@ def normalize_settings(raw: dict | None) -> dict:
         elif k == "load_level":
             s[k] = int(_num(v, 1, 3, DEFAULT_LOAD_LEVEL))
         elif k == "family_k":
-            s[k] = int(_num(v, 2, 10, DEFAULT_FAMILY_K))
+            s[k] = int(_num(v, 3, 10, DEFAULT_FAMILY_K))   # nie unter 3 – sonst ließe sich eine Person herausrechnen
         elif k == "low_mood_days":
             s[k] = int(_num(v, 1, 14, DEFAULT_LOW_MOOD_DAYS))
         elif k == "low_mood_max":

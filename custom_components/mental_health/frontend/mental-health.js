@@ -6,7 +6,7 @@
 const SELF_URL = import.meta.url;
 (() => {
 if (window.__MH) return;
-const VERSION = "1.1.2";
+const VERSION = "1.2.0";
 const DOMAIN = "mental_health";
 const PANEL = "/mental-health";
 
@@ -574,7 +574,7 @@ function pinDialog(root, lang, opts) {
           const res = await opts.check(buf);
           if (res && res.ok) { scrim.remove(); document.removeEventListener("keydown", onKey); resolve(res); return; }
           buf = ""; paint(); shake(box);
-          msg.textContent = res && res.locked_until ? tr(lang, "pin_locked", { t: fmtTime(new Date(res.locked_until * 1000).toISOString(), lang) })
+          msg.textContent = res && res.msg ? res.msg : res && res.locked_until ? tr(lang, "pin_locked", { t: fmtTime(new Date(res.locked_until * 1000).toISOString(), lang) })
             : tr(lang, "pin_wrong", { n: res && res.left != null ? res.left : "?" });
         } catch (e) { buf = ""; paint(); shake(box); msg.textContent = tr(lang, "error"); }
       }

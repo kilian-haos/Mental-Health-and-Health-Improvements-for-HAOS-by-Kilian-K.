@@ -78,7 +78,7 @@ class MHRuntime:
         self.key_store = Store(hass, KEY_STORE_VERSION, STORE_KEYS, private=True, atomic_writes=True)
         self.person_stores: dict[str, Store] = {}
         self.model_stores: dict[str, Store] = {}
-        self.config: dict[str, Any] = {"persons": {}, "settings": normalize_settings({}), "requests": {}}
+        self.config: dict[str, Any] = {"persons": {}, "settings": normalize_settings({}), "requests": {}, "notices": {}}
         self.keyring = Keyring()
         self.persons: dict[str, Person] = {}
         self.status: dict[str, dict[str, Any]] = {}
@@ -86,6 +86,7 @@ class MHRuntime:
         self.hub_values: dict[str, Any] = {}
         self.sessions: dict[str, dict] = {}
         self.pin_fails: dict[str, dict] = {}
+        self.rate_hits: dict[str, list[float]] = {}
         self.subscribers: dict[int, tuple[str | None, Callable[[dict], None]]] = {}
         self._sub_id = 0
         self._unsubs: list[Callable[[], None]] = []
@@ -129,6 +130,7 @@ class MHRuntime:
             "persons": {pid: normalize_person(p, pid) for pid, p in (raw.get("persons") or {}).items()},
             "settings": normalize_settings(raw.get("settings")),
             "requests": dict(raw.get("requests") or {}),
+            "notices": dict(raw.get("notices") or {}),
         }
         self.backup_info = dict(raw.get("backup_info") or {})
         self.keyring = Keyring(await self.key_store.async_load())
@@ -182,7 +184,7 @@ class MHRuntime:
     # ================================================================ Speichern
     def _config_data(self) -> dict:
         return {"persons": self.config["persons"], "settings": self.config["settings"],
-                "requests": self.config["requests"], "backup_info": self.backup_info}
+                "requests": self.config["requests"], "notices": self.config.get("notices") or {}, "backup_info": self.backup_info}
 
     def _model_data(self, p: Person) -> dict:
         return {
@@ -363,6 +365,17 @@ class MHRuntime:
         return {"left": PIN_MAX_FAILS - f["n"] if not f["until"] or f["until"] < time.time() else 0,
                 "locked_until": f["until"] if f["until"] > time.time() else None}
 
+    def _rate_ok(self, key: str, limit: int, window_s: int) -> bool:
+        """Simple sliding-window limit (e.g. PIN changes – so nobody can probe the admin PIN)."""
+        now = time.time()
+        hits = [t for t in self.rate_hits.get(key, []) if t > now - window_s]
+        if len(hits) >= limit:
+            self.rate_hits[key] = hits
+            return False
+        hits.append(now)
+        self.rate_hits[key] = hits
+        return True
+
     async def async_unlock_person(self, user_id: str, pin: str) -> dict:
         p = self.person_for_user(user_id)
         if p is None:
@@ -405,12 +418,16 @@ class MHRuntime:
                 if self.keyring.has_pin(s["pid"]) and s["pid"] in self.persons:
                     self.persons[s["pid"]].vault.tek = None
 
-    async def async_set_pin(self, user_id: str, old_pin: str | None, new_pin: str | None) -> dict:
+    async def async_set_pin(self, user: Any, old_pin: str | None, new_pin: str | None) -> dict:
+        user_id = user if isinstance(user, str) else getattr(user, "id", None)
+        is_admin = False if isinstance(user, str) else bool(getattr(user, "is_admin", False))
         p = self.person_for_user(user_id)
         if p is None:
             raise ValueError("not_set_up")
         if new_pin is not None and (len(new_pin) != 4 or not new_pin.isdigit()):
             raise ValueError("pin_format")
+        if new_pin and not self._rate_ok(f"setpin:{user_id}", 6, 3600):
+            return {"ok": False, "error": "too_many"}
         if self.keyring.has_pin(p.pid):
             key = self._fail_key("person", p.pid)
             if self._locked_until(key):
@@ -421,6 +438,12 @@ class MHRuntime:
                 return {"ok": False, **self._register_fail(key)}
         else:
             tek = self.keyring.tek_without_pin(p.pid)
+        if new_pin and self.admin_pin_set() and await self.hass.async_add_executor_job(verify_secret, new_pin, self.settings.get("admin_pin")):
+            # Gleich wie die Admin-PIN: ablehnen (sonst wäre beim Entsperren unklar, was gemeint ist).
+            # Wer das nicht als Admin tut, kennt die Admin-PIN jetzt -> Admins sofort informieren.
+            if not is_admin:
+                await self._pin_conflict(p)
+            return {"ok": False, "error": "pin_taken"}
         if new_pin:
             await self.hass.async_add_executor_job(self.keyring.set_pin, p.pid, tek, new_pin)
         else:
@@ -433,7 +456,37 @@ class MHRuntime:
             self.sessions[tok] = {"kind": "person", "pid": p.pid, "user_id": user_id,
                                   "exp": time.time() + 60 * p.profile["pin_session_min"]}
             res["token"] = tok
+            if is_admin:
+                atok = token()
+                self.sessions[atok] = {"kind": "admin", "user_id": user_id, "exp": self.sessions[tok]["exp"], "elevated": False, "via": "person"}
+                res["admin_token"] = atok
         return res
+
+    async def _pin_conflict(self, p: Person) -> None:
+        """A person picked the admin PIN as personal PIN: dashboard notice + notification to the admins."""
+        notices = self.config.setdefault("notices", {})
+        prev = notices.get("pin_conflict") or {}
+        notices["pin_conflict"] = {"ts": time.time(), "n": int(prev.get("n", 0)) + 1}
+        self.save_config()
+        url = f"/{PANEL_URL_PATH}?admin=pin"
+        title, msg = self.t("n_pin_conflict_title"), self.t("n_pin_conflict_msg")
+        sent = 0
+        if self.settings["admin_targets"]:
+            sent = await self.notifier.send_admin(self.settings["admin_targets"], title, msg, url,
+                                                  [{"action": "URI", "title": self.t("n_pin_conflict_action"), "uri": url}])
+        if not sent:
+            from homeassistant.components import persistent_notification
+            persistent_notification.async_create(self.hass, f"{msg}\n\n[{self.t('n_pin_conflict_action')}]({url})",
+                                                 title=title, notification_id=f"{DOMAIN}_pin_conflict")
+        self.broadcast_all()
+
+    def dismiss_notice(self, key: str) -> None:
+        if (self.config.get("notices") or {}).pop(key, None) is not None:
+            self.save_config()
+            if key == "pin_conflict":
+                from homeassistant.components import persistent_notification
+                persistent_notification.async_dismiss(self.hass, f"{DOMAIN}_pin_conflict")
+            self.broadcast_all()
 
     async def async_reset_pin(self, pid: str) -> dict:
         """Admin: reset a forgotten PIN. Protected texts are lost for good (numbers stay)."""
@@ -448,6 +501,18 @@ class MHRuntime:
         await self.key_store.async_save(self.keyring.to_dict())
         self.save_person(pid)
         return {"ok": True, "lost": lost}
+
+    def _pin_in_use(self, pin: str) -> bool:
+        """Is this PIN some person's personal PIN? (executor – one scrypt per person with a PIN)"""
+        for pid in list(self.persons):
+            if not self.keyring.has_pin(pid):
+                continue
+            try:
+                self.keyring.tek_with_pin(pid, pin)
+                return True
+            except CryptoError:
+                continue
+        return False
 
     def admin_pin_set(self) -> bool:
         return bool(self.settings.get("admin_pin"))
@@ -481,11 +546,36 @@ class MHRuntime:
         return bool(s and s.get("elevated"))
 
     def admin_access(self, user: Any, tok: str | None) -> bool:
-        """May this user use the admin area right now?"""
+        """May this user use the admin area right now?
+
+        HA admin: with an admin PIN -> admin session; with a personal PIN -> unlocked (the personal
+        unlock hands out an admin session too); with neither -> open. Others: admin PIN session only."""
         uid = getattr(user, "id", None)
         if getattr(user, "is_admin", False):
-            return not self.admin_pin_set() or self._admin_session(uid, tok) is not None
+            if self.admin_pin_set():
+                return self._admin_session(uid, tok) is not None
+            p = self.person_for_user(uid)
+            if p is not None and self.keyring.has_pin(p.pid):
+                return self._admin_session(uid, tok) is not None
+            return True
         return self.admin_pin_set() and self.admin_elevated(uid, tok)
+
+    def gate_ok(self, user_id: str | None, ptok: str | None, atok: str | None) -> bool:
+        """Family and profile: open with the personal PIN session or any admin session.
+        Persons without a personal PIN (and users not set up) have nothing to unlock."""
+        p = self.person_for_user(user_id)
+        if p is None or not self.keyring.has_pin(p.pid):
+            return True
+        return self.person_session_ok(p, user_id, ptok) or self._admin_session(user_id, atok) is not None
+
+    def areas(self, user: Any, ptok: str | None, atok: str | None) -> dict:
+        """Which panel areas are open right now – the panel only shows what the server allows."""
+        uid = getattr(user, "id", None)
+        p = self.person_for_user(uid)
+        personal = p is not None and self.person_session_ok(p, uid, ptok)
+        gate = self.gate_ok(uid, ptok, atok)
+        return {"today": personal or p is None, "insights": personal, "history": personal,
+                "family": gate, "profile": p is not None and gate, "admin": self.admin_access(user, atok)}
 
     async def async_unlock(self, user: Any, pin: str) -> dict:
         """One PIN field for everything.
@@ -513,7 +603,7 @@ class MHRuntime:
                 tok = token()
                 self.sessions[tok] = {"kind": "person", "pid": p.pid, "user_id": uid, "exp": exp}
                 res = {"ok": True, "token": tok, "exp": exp, "elevated": False}
-                if is_admin and self.admin_pin_set():
+                if is_admin:
                     atok = token()
                     self.sessions[atok] = {"kind": "admin", "user_id": uid, "exp": exp, "elevated": False, "via": "person"}
                     res["admin_token"] = atok
@@ -537,9 +627,24 @@ class MHRuntime:
         if p is not None and self.keyring.has_pin(p.pid):
             p.vault.tek = None
 
+    def new_admin_session(self, user: Any) -> str | None:
+        """Admin session right after changing the admin PIN (only needed if admin access is locked at all)."""
+        uid = getattr(user, "id", None)
+        p = self.person_for_user(uid)
+        if not self.admin_pin_set() and not (p is not None and self.keyring.has_pin(p.pid)):
+            return None
+        is_admin = bool(getattr(user, "is_admin", False))
+        atok = token()
+        self.sessions[atok] = {"kind": "admin", "user_id": uid, "exp": time.time() + 15 * 60, "elevated": not is_admin}
+        return atok
+
     async def async_set_admin_pin(self, pin: str | None) -> None:
         if pin is not None and (len(pin) != 4 or not pin.isdigit()):
             raise ValueError("pin_format")
+        if pin and await self.hass.async_add_executor_job(self._pin_in_use, pin):
+            raise ValueError("pin_in_use")
+        if pin:
+            self.dismiss_notice("pin_conflict")      # neue Admin-PIN -> Hinweis erledigt
         self.settings["admin_pin"] = (await self.hass.async_add_executor_job(hash_secret, pin)) if pin else None
         for k in [k for k, s in self.sessions.items() if s["kind"] == "admin"]:
             self.sessions.pop(k, None)
@@ -1394,16 +1499,20 @@ class MHRuntime:
         self._after_structure_change()
 
     # ================================================================ Payloads für die Karte
-    def me_payload(self, user: Any, admin_tok: str | None = None) -> dict:
+    def me_payload(self, user: Any, admin_tok: str | None = None, ptok: str | None = None) -> dict:
         v = self.viewer(user, admin_tok)
         p = self.person_for_user(v.user_id)
+        notices = {}
+        if v.is_admin and (self.config.get("notices") or {}).get("pin_conflict"):
+            notices["pin_conflict"] = self.config["notices"]["pin_conflict"]
         base = {"version": VERSION, "is_admin": v.is_admin, "admin_pin": self.admin_pin_set(),
                 "ha_admin": bool(getattr(user, "is_admin", False)), "admin_access": self.admin_access(user, admin_tok),
                 "admin_elevated": self.admin_elevated(v.user_id, admin_tok),
                 "settings_public": {"evening_from": self.settings["evening_from"],
                                     "morning_until": self.settings["morning_until"],
                                     "family_k": self.settings["family_k"]},
-                "llm": {"enabled": bool(self.settings["llm"]["enabled"])}, "persons": len(self.persons)}
+                "llm": {"enabled": bool(self.settings["llm"]["enabled"])}, "persons": len(self.persons),
+                "areas": self.areas(user, ptok, admin_tok), "notices": notices}
         if p is None:
             req = self.config["requests"].get(v.user_id or "")
             return {**base, "setup": False,
@@ -1482,27 +1591,58 @@ class MHRuntime:
             "dump": p.dump_preview(),
         }
 
+    def family_k(self) -> int:
+        """Minimum number of persons before any family value is shown (never below 3)."""
+        return max(3, int(self.settings["family_k"]))
+
+    def slot_state(self, p: Person, day: date, slot: str, today: date) -> str:
+        """done | open | missed | paused | off | pending (today, not yet) | none (past day, nothing)."""
+        n = p.day_numbers(day)
+        st = (n.get("status") or {}).get(slot)
+        if n.get(slot[0]) or st == "done":
+            return "done"
+        if day == today and self.window_open(p.pid, slot):
+            return "open"
+        if st == "missed":
+            return "missed"
+        if p.paused_on(day):
+            return "paused"
+        if (p.profile["schedule"].get(slot) or {}).get("mode") == "manual":
+            return "off" if day < today else "pending"
+        return "pending" if day >= today else "none"
+
     def family_payload(self, viewer: PM.Viewer) -> dict:
-        """Family view for persons: no names next to values, no single values, k-threshold."""
+        """Family view: who has checked in (no contents), family mood only with >= k persons."""
         clock = self.clock()
         today = clock.today
-        k = self.settings["family_k"]
+        k = self.family_k()
         hist = []
         for i in range(0, 30):
             d = (today - timedelta(days=i)).isoformat()
             moods = [m for m in (p.day_mood(p.vault.numbers(d)) for p in self.persons.values()) if m is not None]
             if len(moods) >= k:
                 hist.append({"day": d, "mood": round(sum(moods) / len(moods), 1), "n": len(moods)})
+        hist.reverse()
+        latest = hist[-1] if hist else None
+        today_n = sum(1 for p in self.persons.values() if p.day_mood(p.vault.numbers(today.isoformat())) is not None)
         scores = [self.values.get(pid, {}).get("health_score") for pid in self.persons]
-        today_moods = [self.values.get(pid, {}).get("mood_today") for pid in self.persons]
-        tm = [m for m in today_moods if m is not None]
-        show = len(tm) >= k
+        yday = today - timedelta(days=1)
+        members = []
+        for p in sorted(self.persons.values(), key=lambda x: x.name.lower()):
+            members.append({
+                "pid": p.pid, "name": p.name, "picture": self._picture(p), "child": p.child, "me": p.user_id == viewer.user_id,
+                "today": {s: self.slot_state(p, today, s, today) for s in (MORNING, EVENING)},
+                "yesterday": {s: self.slot_state(p, yday, s, today) for s in (MORNING, EVENING)},
+            })
         return {
-            "k": k, "enough": show, "weather": HS.family_weather(sum(tm) / len(tm)) if show else None,
-            "mood": round(sum(tm) / len(tm), 1) if show else None,
-            "health": HS.family(scores, k), "history": hist[::-1],
+            "k": k, "enough": latest is not None,
+            "weather": HS.family_weather(latest["mood"]) if latest else None,
+            "mood": latest["mood"] if latest else None, "mood_day": latest["day"] if latest else None,
+            "mood_today": bool(latest and latest["day"] == today.isoformat()), "today_n": today_n,
+            "health": HS.family(scores, k), "history": hist,
             "participation": self.hub_values.get("participation") if len(self.persons) >= k else None,
             "birthdays": self.family_birthdays(None, today, 30), "members": len(self.persons),
+            "status": members, "today": today.isoformat(), "yesterday": yday.isoformat(),
         }
 
     def admin_payload(self) -> dict:

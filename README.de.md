@@ -27,7 +27,7 @@ Läuft auf **jeder Home-Assistant-Installationsart** (Home Assistant OS, Contain
 - **Gewicht** mit geglättetem Trend, Wochenschnitt und gesundem Optimum aus deiner Größe – mit verbindlichen Sicherheitsregeln (Abnehmen unter den gesunden Bereich wird nie gelobt, Kinder bekommen gar keine Wertung).
 - **Zyklus** – Periode dokumentieren, gelernte Prognose (optional verfeinert über die Basaltemperatur), für Admins nur drei Sensoren sichtbar.
 - **Geburtstage** – Alter, Countdown, Konfetti, mehrere am selben Tag, Daten ohne Jahr, 29. Februar.
-- **Familienansicht** – Familien-„Wetter“ und Health Score ohne Namen und Einzelwerte, nur wenn genug Personen eingetragen haben.
+- **Familienansicht** – wer heute schon eingetragen hat (morgens und abends, auch verpasste, gestern klein darunter), Familien-„Wetter“, Familienstimmung mit einfachem Verlauf und Health Score. Stimmungswerte nie pro Person und erst ab 3 Personen – bis dahin bleibt der letzte Stand sichtbar, der das erfüllt hat.
 - **Kindermodus** – wärmere Sprache, größere Bedienelemente, Emoji-Skala, „Bewegung“ statt Training, keine Gewichtswertung, kindgerechte Hilfeangebote.
 - **Privatsphäre eingebaut** – Inhalte verschlüsselt gespeichert, nur die Person selbst liest ihre Einträge (auch Admins nicht), optionale persönliche PIN, die Texte zusätzlich kryptografisch schützt. Siehe [Privatsphäre](#privatsphäre).
 - **Admin-Bereich im Panel** – Personen anlegen, Rechte, Module, Schlafquellen mit Live-Vorschau der letzten 48 h, Zeitpläne, Benachrichtigungsziele, Admin-PIN, Rechenlast, LLM-Beta, Backup & Wiederherstellen.
@@ -95,6 +95,8 @@ Mehr: [docs/privacy.md](docs/privacy.md) (Englisch).
 | Einträge, Journal, Insights, Zyklus-Details | **nur eigene** | nur eigene | nur eigene | nur eigene |
 
 Was jemand nicht ändern darf, ist ausgegraut mit kurzem Grund – nie versteckt. Eine optionale **Admin-PIN** (4-stellig, standardmäßig aus) schützt den Admin-Bereich; sie ist völlig getrennt von den Personen-PINs. Es gibt **ein PIN-Feld** (🔑): Die persönliche PIN eines Admins öffnet auch den Admin-Bereich; wird *stattdessen* die Admin-PIN eingegeben, gibt es Admin-Rechte nur für die aktuelle Sitzung – auch für Nicht-Admins, erkennbar am Hinweis „Als Admin drin“. Die Admin-PIN entschlüsselt nie die Texte einer Person.
+
+**Alles hinter dem Code.** Mit persönlicher PIN ist *jeder* Bereich des Panels gesperrt, bis sie eingegeben ist – Heute, Insights, Verlauf, Familie, Profil und (bei Admins) Admin. Die persönliche PIN öffnet alles, was man nutzen darf. Die Admin-PIN stattdessen öffnet nur **Admin, Profil und Familie** – die eigenen Einträge bleiben zu. Nicht-Admins sehen den Admin-Tab gar nicht, bis sie die Admin-PIN eingeben. Zwei Personen dürfen dieselbe persönliche PIN haben (das kann nicht kollidieren). Eine persönliche PIN darf **nicht** die Admin-PIN sein: Die Person wird gebeten, eine andere zu wählen, und die Admins bekommen sofort eine Benachrichtigung und einen Hinweis im Panel, die Admin-PIN zu ändern („Jetzt ändern“ oder „Ist egal“ – dann ist er bis zum nächsten Mal weg). Eine Admin-PIN, die schon jemand als persönliche PIN nutzt, wird abgelehnt („bereits in Benutzung“). PIN-Änderungen sind auf 6 pro Stunde begrenzt, damit niemand die Admin-PIN ausprobieren kann.
 
 ## Check-ins
 
@@ -234,7 +236,7 @@ Ein Gerät pro Person („<Name> – Mental Health“) und ein Familien-Hub. Ent
 
 ## Einstellungen
 
-Admin-Bereich → Einstellungen: Tagesgrenze, Abend-Eintrag ab, Morgen-Eintrag bis, Antwortfenster, Erinnerungen, Nachtragen, Zeit der nächtlichen Auswertung, Rechenlast, Familienwerte ab (Personen, mind. 2), Schutzhinweis nach (Tagen) / mit Stimmung höchstens, Wochenrückblick-Benachrichtigung, Arbeitstag-Sensor, Außentemperatur und Tageslicht (optional, für die Prognose), Sperrzeit für Anfragen. Pro Person: Module, Zeiten, Abstand zum Schlaf, Benachrichtigungsverhalten, Dauer der PIN-Sitzung.
+Admin-Bereich → Einstellungen: Tagesgrenze, Abend-Eintrag ab, Morgen-Eintrag bis, Antwortfenster, Erinnerungen, Nachtragen, Zeit der nächtlichen Auswertung, Rechenlast, Familienwerte ab (Personen, mind. 3), Schutzhinweis nach (Tagen) / mit Stimmung höchstens, Wochenrückblick-Benachrichtigung, Arbeitstag-Sensor, Außentemperatur und Tageslicht (optional, für die Prognose), Sperrzeit für Anfragen. Pro Person: Module, Zeiten, Abstand zum Schlaf, Benachrichtigungsverhalten, Dauer der PIN-Sitzung.
 
 ## Tipps
 
@@ -248,6 +250,7 @@ Admin-Bereich → Einstellungen: Tagesgrenze, Abend-Eintrag ab, Morgen-Eintrag b
 - **Android-Meldung kommt nach dem Wegwischen nicht zurück**: Akku „Nicht eingeschränkt“ für die Companion App, Benachrichtigungszugriff erteilt, App aktuell. Testbenachrichtigung im Profil senden.
 - **Schlaf zu früh/spät erkannt**: ein paarmal im Morgen-Check-in korrigieren; im Profil die Vorschau der Quelle prüfen (Schwellenlinie, Richtung).
 - **„Gesperrt – PIN eingeben“**: deine persönliche PIN schützt die Ansicht; die Dauer der Sitzung stellst du im Profil ein.
+- **„Braucht deinen persönlichen PIN“** bei Heute / Insights / Verlauf: Du bist mit der Admin-PIN drin – sie öffnet nur Admin, Profil und Familie.
 - **Reparaturmeldung „… fehlt“**: eine Quelle oder ein Benachrichtigungsziel wurde entfernt – ein Klick entfernt den Verweis, Daten bleiben.
 - **Neu anfangen**: Integration entfernen (löscht die Stores; eigene Backup-Dateien bleiben) und neu hinzufügen.
 - **Protokolle / Diagnose**: Einstellungen → System → Protokolle; Geräte & Dienste → Mental Health → ⋮ → **Diagnose herunterladen** (ohne Inhalte).

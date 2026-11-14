@@ -384,8 +384,84 @@ class UnifiedPin(Base):
         self.aw(self.rt.async_set_admin_pin(None))
         r = self.aw(self.rt.async_unlock(ANNA, "2468"))
         self.assertFalse(r["ok"])
-        self.assertTrue(self.rt.admin_access(ADMIN, None))                 # ohne Admin-PIN: Admins frei
+        # ohne Admin-PIN, aber mit persönlicher PIN: der Admin-Bereich ist erst nach dem Entsperren offen
+        self.assertFalse(self.rt.admin_access(ADMIN, None))
+        r = self.aw(self.rt.async_unlock(ADMIN, "1357"))
+        self.assertTrue(self.rt.admin_access(ADMIN, r["admin_token"]))
         self.assertFalse(self.rt.admin_access(ANNA, None))
+
+    def test_admin_without_any_pin_is_open(self):
+        self.aw(self.rt.async_set_admin_pin(None))
+        self.aw(self.rt.async_unlock(ADMIN, "1357"))
+        tok = next(k for k, v in self.rt.sessions.items() if v["kind"] == "person" and v["user_id"] == "u_admin")
+        self.aw(self.rt.async_set_pin("u_admin", "1357", None))
+        self.assertTrue(self.rt.admin_access(ADMIN, None))
+        del tok
+
+    def test_areas(self):
+        a = self.rt.areas(ANNA, None, None)
+        self.assertEqual(a, {"today": False, "insights": False, "history": False, "family": False, "profile": False, "admin": False})
+        r = self.aw(self.rt.async_unlock(ANNA, "4711"))
+        a = self.rt.areas(ANNA, r["token"], r.get("admin_token"))
+        self.assertEqual(a, {"today": True, "insights": True, "history": True, "family": True, "profile": True, "admin": False})
+        self.rt.lock_user("u_anna")
+        r = self.aw(self.rt.async_unlock(ANNA, "2468"))           # Admin-PIN statt der eigenen
+        a = self.rt.areas(ANNA, r.get("token"), r["admin_token"])
+        self.assertEqual(a, {"today": False, "insights": False, "history": False, "family": True, "profile": True, "admin": True})
+        r = self.aw(self.rt.async_unlock(ADMIN, "1357"))
+        self.assertTrue(all(self.rt.areas(ADMIN, r["token"], r["admin_token"]).values()))
+        # Lena hat keine PIN: alles offen außer Admin
+        a = self.rt.areas(LENA, None, None)
+        self.assertEqual(a, {"today": True, "insights": True, "history": True, "family": True, "profile": True, "admin": False})
+
+    def test_personal_pin_equal_admin_pin_refused_and_reported(self):
+        H.NOTIFICATIONS.clear()
+        res = self.aw(self.rt.async_set_pin(LENA, None, "2468"))
+        self.assertEqual(res, {"ok": False, "error": "pin_taken"})
+        self.assertFalse(self.rt.keyring.has_pin(self.lena.pid))
+        self.assertIn("pin_conflict", self.rt.me_payload(ADMIN)["notices"])
+        self.assertNotIn("pin_conflict", self.rt.me_payload(LENA)["notices"])
+        self.assertTrue(any(n["id"] == "mental_health_pin_conflict" for n in H.NOTIFICATIONS))
+        # "Ist egal" -> weg bis zum nächsten Mal
+        self.rt.dismiss_notice("pin_conflict")
+        self.assertNotIn("pin_conflict", self.rt.me_payload(ADMIN)["notices"])
+        self.assertFalse(any(n["id"] == "mental_health_pin_conflict" for n in H.NOTIFICATIONS))
+        self.aw(self.rt.async_set_pin(LENA, None, "2468"))
+        self.assertIn("pin_conflict", self.rt.me_payload(ADMIN)["notices"])
+        # neue Admin-PIN erledigt den Hinweis
+        self.aw(self.rt.async_set_admin_pin("8642"))
+        self.assertNotIn("pin_conflict", self.rt.me_payload(ADMIN)["notices"])
+
+    def test_admin_choosing_admin_pin_as_personal_no_alarm(self):
+        self.aw(self.rt.async_set_pin(ADMIN, "1357", None))
+        res = self.aw(self.rt.async_set_pin(ADMIN, None, "2468"))
+        self.assertEqual(res["error"], "pin_taken")
+        self.assertNotIn("pin_conflict", self.rt.me_payload(ADMIN)["notices"])
+
+    def test_admin_pin_must_not_be_a_personal_pin(self):
+        with self.assertRaises(ValueError) as cm:
+            self.aw(self.rt.async_set_admin_pin("4711"))
+        self.assertEqual(str(cm.exception), "pin_in_use")
+        self.assertTrue(self.rt.admin_pin_set())
+        self.aw(self.rt.async_set_admin_pin("9753"))              # frei -> ok
+
+    def test_same_personal_pin_for_two_persons_ok(self):
+        res = self.aw(self.rt.async_set_pin(LENA, None, "4711"))
+        self.assertTrue(res["ok"])
+        self.assertNotIn("pin_conflict", self.rt.me_payload(ADMIN)["notices"])
+
+    def test_pin_changes_rate_limited(self):
+        old = None
+        for i in range(6):
+            pin = f"{1000 + i}"
+            self.assertTrue(self.aw(self.rt.async_set_pin(LENA, old, pin))["ok"])
+            old = pin
+        self.assertEqual(self.aw(self.rt.async_set_pin(LENA, old, "5555"))["error"], "too_many")
+
+    def test_personal_unlock_gives_admin_token_to_admins(self):
+        r = self.aw(self.rt.async_set_pin(ADMIN, "1357", "1359"))
+        self.assertIn("admin_token", r)
+        self.assertTrue(self.rt.admin_access(ADMIN, r["admin_token"]))
 
 
 class BrainDumpRuntime(Base):
@@ -488,8 +564,42 @@ class Family(Base):
         fam = self.rt.family_payload(self.rt.viewer(ANNA))
         self.assertTrue(fam["enough"])
         self.assertEqual(fam["mood"], 7.0)
-        self.assertNotIn("Anna", json.dumps({k: v for k, v in fam.items() if k != "birthdays"}))
+        # Namen nur in der Teilnahme-Liste – dort keine Werte
+        self.assertNotIn("Anna", json.dumps({k: v for k, v in fam.items() if k not in ("birthdays", "status")}))
+        for m in fam["status"]:
+            self.assertEqual(set(m), {"pid", "name", "picture", "child", "me", "today", "yesterday"})
         self.assertEqual(self.rt.hub_values["family_mood"], 7.0)
+
+    def test_status_today_and_yesterday(self):
+        H.set_now(datetime(2026, 11, 10, 21, 0, tzinfo=H.TZ))
+        self.aw(self.rt.open_window(self.anna.pid, "evening", notify=False))
+        self.aw(self.rt.close_window(self.anna.pid, "evening", "missed"))
+        self.evening(self.kilian, 7)
+        H.set_now(datetime(2026, 11, 11, 8, 0, tzinfo=H.TZ))
+        self.aw(self.rt.open_window(self.lena.pid, "morning", notify=False))
+        fam = self.rt.family_payload(self.rt.viewer(ANNA))
+        st = {m["name"]: m for m in fam["status"]}
+        self.assertEqual(st["Anna"]["yesterday"]["evening"], "missed")
+        self.assertEqual(st["Kilian"]["yesterday"]["evening"], "done")
+        self.assertEqual(st["Lena"]["today"]["morning"], "open")
+        self.assertEqual(st["Kilian"]["today"]["evening"], "pending")
+        self.assertTrue(st["Anna"]["me"])
+        self.assertEqual(fam["yesterday"], "2026-11-10")
+
+    def test_mood_stays_until_next_k(self):
+        H.set_now(datetime(2026, 11, 10, 21, 0, tzinfo=H.TZ))
+        for p, m in ((self.kilian, 8), (self.anna, 6), (self.lena, 7)):
+            self.evening(p, m)
+        H.set_now(datetime(2026, 11, 11, 21, 0, tzinfo=H.TZ))
+        self.evening(self.kilian, 2)                      # nur einer heute -> alter Stand bleibt
+        fam = self.rt.family_payload(self.rt.viewer(ANNA))
+        self.assertTrue(fam["enough"])
+        self.assertEqual((fam["mood"], fam["mood_day"], fam["mood_today"], fam["today_n"]), (7.0, "2026-11-10", False, 1))
+        self.assertEqual([h["day"] for h in fam["history"]], ["2026-11-10"])
+
+    def test_k_never_below_three(self):
+        from custom_components.mental_health.storage import normalize_settings
+        self.assertEqual(normalize_settings({"family_k": 2})["family_k"], 3)
 
     def test_birthdays_same_day(self):
         self.rt.update_profile(self.anna.pid, {"birthdate": "--03-02"}, self.rt.viewer(ADMIN))

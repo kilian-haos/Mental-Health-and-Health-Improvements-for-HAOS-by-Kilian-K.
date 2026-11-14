@@ -27,7 +27,7 @@ Works on **every Home Assistant installation type** (Home Assistant OS, Containe
 - **Weight** with a smoothed trend, weekly average and a healthy optimum from your height – with binding safety rules (losing weight below the healthy range is never praised, children get no rating at all).
 - **Cycle** – period documentation, learned forecast (optionally refined by basal temperature), only three sensors visible to admins.
 - **Birthdays** – age, countdown, confetti, several people on the same day, dates without a year, 29 February.
-- **Family view** – family "weather" and health score without names or single values, shown only when enough people have filled in.
+- **Family view** – who has checked in today (morning and evening, missed ones included, yesterday small below), family "weather", family mood with a simple trend and health score. Mood values never per person and only from at least 3 people – until then the last value that met this stays visible.
 - **Children's mode** – warmer language, larger controls, emoji scale, "exercise" instead of training, no weight rating, child-appropriate help offers.
 - **Privacy built in** – contents are encrypted at rest, only the person can read their own entries (admins included), optional personal PIN that also protects texts cryptographically. See [Privacy](#privacy).
 - **Admin area in the panel** – add persons, rights, modules, sleep sources with a live 48 h preview, schedules, notification targets, admin PIN, computing load, LLM beta, backup & restore.
@@ -95,6 +95,8 @@ Copy `custom_components/mental_health` into `<config>/custom_components/` and re
 | Entries, journal, insights, cycle details | **only own** | only own | only own | only own |
 
 What someone may not change is shown greyed out with a short reason – never hidden. An optional **admin PIN** (4 digits, off by default) protects the admin area; it is completely separate from personal PINs. There is **one PIN field** (🔑): an admin's personal PIN also opens the admin area; entering the admin PIN *instead* gives admin rights for the current session only – also to non-admin users, shown with an "Admin" hint. The admin PIN never decrypts anyone's texts.
+
+**Everything behind the code.** With a personal PIN, *every* area of the panel is locked until it is entered – Today, Insights, History, Family, Profile and (for admins) Admin. The personal PIN opens everything you may use. The admin PIN entered instead opens only **Admin, Profile and Family** – your own entries stay closed. Non-admins don't see the Admin tab at all until they enter the admin PIN. Two people may use the same personal PIN (they can't mix up). A personal PIN may **not** be the admin PIN: the person is asked to choose another one, and the admins immediately get a notification and a notice in the panel to change the admin PIN ("Change now" or "Doesn't matter" – then it's hidden until it happens again). Choosing an admin PIN that someone already uses as their personal PIN is refused ("already in use"). PIN changes are limited to 6 per hour, so nobody can probe the admin PIN.
 
 ## Check-ins
 
@@ -225,7 +227,7 @@ One device per person ("<Name> – Mental Health") and a family hub. Entities of
 
 ## Settings
 
-Admin area → Settings: day boundary, evening entry from, morning entry until, answer window, reminders, filling in later, nightly analysis time, computing load, family values from (people, min. 2), protective hint after (days) / with mood at most, weekly review notification, workday sensor, outdoor temperature and daylight (optional, for the forecast), request cooldown. Per person: modules, times, gap to sleep, notification behaviour, PIN session duration.
+Admin area → Settings: day boundary, evening entry from, morning entry until, answer window, reminders, filling in later, nightly analysis time, computing load, family values from (people, min. 3), protective hint after (days) / with mood at most, weekly review notification, workday sensor, outdoor temperature and daylight (optional, for the forecast), request cooldown. Per person: modules, times, gap to sleep, notification behaviour, PIN session duration.
 
 ## Tips
 
@@ -239,6 +241,7 @@ Admin area → Settings: day boundary, evening entry from, morning entry until, 
 - **Android notification does not come back after swiping**: battery "Unrestricted" for the Companion App, notification access granted, app up to date. Send a test notification from the profile.
 - **Sleep detected too early/late**: correct it in the morning check-in a few times; check the source's preview in the profile (threshold line, direction).
 - **"Locked – enter your PIN"**: your personal PIN protects the view; the session duration is set in the profile.
+- **"Needs your personal PIN"** on Today / Insights / History: you are in with the admin PIN – it only opens Admin, Profile and Family.
 - **Repair notice "… is missing"**: a source or notification target was removed – one click removes the reference; data is kept.
 - **Start from scratch**: remove the integration (deletes the stores; own backup files stay) and add it again.
 - **Logs / diagnostics**: Settings → System → Logs; Devices & services → Mental Health → ⋮ → **Download diagnostics** (no contents).

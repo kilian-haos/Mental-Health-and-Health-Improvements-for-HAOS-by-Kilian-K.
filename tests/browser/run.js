@@ -189,6 +189,12 @@ const click = (page, sel, i = 0) => page.evaluate(`(() => { const l = (${deep})(
     ({ page, ctx, errs } = await open(browser, `lang=${lang}&user=adult&tab=family`, PHONE));
     check(`${lang} family: Wetter`, (await text(page, ".title")).includes(T("Heiter", "Mostly sunny")));
     check(`${lang} family: Handy-Leiste`, await page.evaluate(`getComputedStyle((${deep})("nav.bottom")[0]).display !== "none"`));
+    check(`${lang} family: wer hat eingetragen`, (await count(page, ".fam-list .fm")) === 3 && (await count(page, ".st.done")) === 2 && (await count(page, ".st.missed")) === 1 && (await count(page, ".st.open")) === 1);
+    check(`${lang} family: gestern klein`, (await count(page, ".fm .yd i")) === 6 && (await count(page, ".fm .yd i.missed")) === 1);
+    check(`${lang} family: Stand-Hinweis`, (await text(page, ".fam-hero .stand")).includes(T("Stand", "As of")));
+    const fo = await page.evaluate(`(() => { const sec = (${deep})('.fam-list')[0], r = sec.getBoundingClientRect(); const bad = [];
+      sec.querySelectorAll('*').forEach((e) => { const b = e.getBoundingClientRect(); if (b.width && (b.right > r.right + .5 || b.left < r.left - .5)) bad.push(e.className); }); return bad; })()`);
+    check(`${lang} family: Liste ohne Überlauf`, fo.length === 0, fo.slice(0, 5).join(", "));
     await page.screenshot({ path: path.join(OUT, `${lang}_family_phone.png`), fullPage: true });
     check(`${lang} family: keine JS-Fehler`, errs.length === 0, errs.join(" ; "));
     await ctx.close();
@@ -379,6 +385,93 @@ const click = (page, sel, i = 0) => page.evaluate(`(() => { const l = (${deep})(
     check(`${lang} adminpin: Hinweis „als Admin“`, (await count(page, ".admin-flag")) === 1);
     await page.screenshot({ path: path.join(OUT, `${lang}_admin_elevated.png`), fullPage: false });
     check(`${lang} adminpin: keine JS-Fehler`, errs.length === 0, errs.join(" ; "));
+    await ctx.close();
+
+    // Alle Bereiche hinter dem Code: Admin-PIN öffnet nur Admin, Profil, Familie
+    ({ page, ctx, errs } = await open(browser, `lang=${lang}&user=adult&tab=today&pin=1&apin=1`, DESK));
+    const pinType = async (code) => { for (const d of code) { await click(page, `.pin-pad button[data-k="${d}"]`); await page.waitForTimeout(40); } await page.waitForTimeout(700); };
+    check(`${lang} sperre: Sperrbildschirm`, (await count(page, ".lock .unl")) === 1);
+    check(`${lang} sperre: alle Tabs gesperrt`, (await count(page, ".tab.lk")) === 5);
+    check(`${lang} sperre: kein Admin-Tab`, (await count(page, '.tab[data-tab="admin"]')) === 0);
+    check(`${lang} sperre: keine Inhalte geladen`, (await page.evaluate(() => window.__calls.filter((c) => /dashboard|family|profile$/.test(c.type)).length)) === 0);
+    await click(page, '.tab[data-tab="family"]');
+    await page.waitForTimeout(400);
+    check(`${lang} sperre: Familie gesperrt`, (await count(page, ".lock .unl")) === 1);
+    await click(page, ".lock .unl");
+    await page.waitForTimeout(300);
+    await pinType("9999");
+    check(`${lang} sperre: Admin-PIN öffnet Familie`, (await count(page, ".fam-list")) === 1);
+    check(`${lang} sperre: Admin-Tab erscheint`, (await count(page, '.tab[data-tab="admin"]')) === 1);
+    check(`${lang} sperre: Heute bleibt zu`, (await count(page, '.tab.lk[data-tab="today"]')) === 1 && (await count(page, '.tab.lk[data-tab="profile"]')) === 0);
+    await click(page, '.tab[data-tab="today"]');
+    await page.waitForTimeout(400);
+    check(`${lang} sperre: Hinweis persönlicher PIN`, (await text(page, ".lock .title")).includes(T("persönlichen PIN", "personal PIN")) && (await count(page, ".lock .goadm")) === 1);
+    await page.screenshot({ path: path.join(OUT, `${lang}_lock_personal.png`), fullPage: false });
+    await click(page, ".lock .goadm");
+    await page.waitForTimeout(700);
+    check(`${lang} sperre: zum Admin-Bereich`, (await count(page, '.tab.on[data-tab="admin"]')) === 1 && (await count(page, ".person-row")) >= 1);
+    // sperren, dann persönliche PIN: alles offen, Admin-Tab wieder weg
+    await click(page, ".lockb");
+    await page.waitForTimeout(800);
+    check(`${lang} sperre: nach Sperren kein Admin-Tab`, (await count(page, '.tab[data-tab="admin"]')) === 0 && (await count(page, ".tab.lk")) === 5);
+    await click(page, ".keyb");
+    await page.waitForTimeout(300);
+    await pinType("1234");
+    check(`${lang} sperre: persönliche PIN öffnet alles`, (await count(page, ".tab.lk")) === 0 && (await count(page, '.tab[data-tab="admin"]')) === 0);
+    check(`${lang} sperre: keine JS-Fehler`, errs.length === 0, errs.join(" ; "));
+    await ctx.close();
+
+    // Admin mit persönlicher PIN: persönliche PIN öffnet auch Admin
+    ({ page, ctx, errs } = await open(browser, `lang=${lang}&user=admin&tab=admin&pin=1`, DESK));
+    check(`${lang} adminsperre: Admin gesperrt`, (await count(page, ".lock .unl")) === 1 && (await count(page, ".tab.lk")) === 6);
+    await click(page, ".lock .unl");
+    await page.waitForTimeout(300);
+    await pinType("1234");
+    check(`${lang} adminsperre: alles offen`, (await count(page, ".tab.lk")) === 0 && (await count(page, ".person-row")) >= 1);
+    check(`${lang} adminsperre: keine JS-Fehler`, errs.length === 0, errs.join(" ; "));
+    await ctx.close();
+
+    // Hinweis: Admin-PIN ist bekannt geworden -> ändern (benutzter Code abgelehnt) oder ignorieren
+    ({ page, ctx, errs } = await open(browser, `lang=${lang}&user=admin&tab=family&notice=1`, DESK));
+    check(`${lang} hinweis: sichtbar`, (await count(page, ".notice")) === 1);
+    await page.screenshot({ path: path.join(OUT, `${lang}_notice.png`), fullPage: false });
+    await click(page, ".notice .ncch");
+    await page.waitForTimeout(300);
+    for (const d of "1234") { await click(page, `.pin-pad button[data-k="${d}"]`); await page.waitForTimeout(40); }
+    await page.waitForTimeout(400);
+    check(`${lang} hinweis: benutzter Code abgelehnt`, (await text(page, ".scrim .msg")).includes(T("bereits in Benutzung", "already in use")));
+    await pinType("4321");
+    const asp = await page.evaluate(() => window.__calls.filter((c) => c.type === "mental_health/admin_set_pin").map((c) => c.pin));
+    check(`${lang} hinweis: neue Admin-PIN gesetzt`, asp.includes("4321") && (await count(page, ".scrim")) === 0, JSON.stringify(asp));
+    await page.waitForTimeout(400);
+    check(`${lang} hinweis: danach weg`, (await count(page, ".notice")) === 0);
+    await ctx.close();
+    ({ page, ctx, errs } = await open(browser, `lang=${lang}&user=admin&tab=today&notice=1`, DESK));
+    await click(page, ".notice .ncig");
+    await page.waitForTimeout(500);
+    check(`${lang} hinweis: „Ist egal“`, (await count(page, ".notice")) === 0 && (await page.evaluate(() => window.__calls.some((c) => c.type === "mental_health/admin_dismiss_notice"))));
+    check(`${lang} hinweis: keine JS-Fehler`, errs.length === 0, errs.join(" ; "));
+    await ctx.close();
+
+    // Persönliche PIN = Admin-PIN -> direkt im Dialog anderen PIN verlangen
+    ({ page, ctx, errs } = await open(browser, `lang=${lang}&user=adult&tab=profile&apin=1`, DESK));
+    await click(page, ".pinset");
+    await page.waitForTimeout(300);
+    for (const d of "9999") { await click(page, `.pin-pad button[data-k="${d}"]`); await page.waitForTimeout(40); }
+    await page.waitForTimeout(400);
+    check(`${lang} pin: Admin-PIN abgelehnt`, (await text(page, ".scrim .msg")).includes(T("anderen", "different")));
+    await pinType("2580");
+    const sp = await page.evaluate(() => window.__calls.filter((c) => c.type === "mental_health/set_pin").map((c) => c.new));
+    check(`${lang} pin: anderer PIN gesetzt`, JSON.stringify(sp) === JSON.stringify(["9999", "2580"]) && (await count(page, ".scrim")) === 0, JSON.stringify(sp));
+    // eingeklappter Guide: "?" und Pfeil sauber untereinander, nichts ragt heraus
+    await click(page, ".guide .gt");
+    await page.waitForTimeout(450);
+    const gd = await page.evaluate(`(() => { const g = (${deep})('.guide')[0], r = g.getBoundingClientRect(); const kids = [...g.querySelectorAll('.row > *')].filter((e) => getComputedStyle(e).display !== 'none').map((e) => e.getBoundingClientRect());
+      return { w: r.width, inside: kids.every((k) => k.left >= r.left - .5 && k.right <= r.right + .5), stacked: kids.length === 2 && kids[1].top >= kids[0].bottom - 1 }; })()`);
+    check(`${lang} guide: eingeklappt sauber`, gd.w <= 56 && gd.inside && gd.stacked, JSON.stringify(gd));
+    await (await page.evaluateHandle(`(${deep})('.guide')[0]`)).asElement().screenshot({ path: path.join(OUT, `${lang}_guide_collapsed.png`) }).catch(() => {});
+    await click(page, ".guide .gt");
+    check(`${lang} pin: keine JS-Fehler`, errs.length === 0, errs.join(" ; "));
     await ctx.close();
 
     // Nicht angelegt: Vorschau + Anfrage
